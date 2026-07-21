@@ -1,0 +1,26 @@
+{
+  "label": "parkinson_market_adjusted_expansion",
+  "centering": "subtract train-ticker activation/embedding centroid and train-ticker label mean",
+  "alpha_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0,
+    1000.0
+  ],
+  "bge_selected_alpha": 10.0,
+  "bge_validation_spearman": 0.09290665085928529,
+  "activation_selected_layer": 20,
+  "activation_selected_alpha": 1.0,
+  "activation_validation_spearman": 0.11758899938470854,
+  "axis_fit_split": "train only",
+  "selection_split": "validation only",
+  "test_evaluated_after_selection": true,
+  "counts": {
+    "test": 12478,
+    "train": 25767,
+    "val": 12051
+  },
+  "gpu_used": false
+}

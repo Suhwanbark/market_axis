@@ -1,0 +1,8 @@
+{
+  "gpu_used": false,
+  "counts": {
+    "test": 707,
+    "train": 700,
+    "val": 1008
+  }
+}

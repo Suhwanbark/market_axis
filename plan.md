@@ -597,6 +597,15 @@ Qwen2.5에만 우연히 나타나는 결과인지 확인하기 위해 Qwen2.5-7B
 
 현재 결과는 activation axis가 volatility forecasting에 추가 정보를 준다는 점을 보여주지만, 논문의 기여를 강화하려면 **axis가 실제 market-impactful information을 잘 포착했다는 검증**과 **forecasting 이외의 실용적인 활용 사례**가 더 필요하다.
 
+### 최우선 확인 사항
+
+- **Knowledge-cutoff 문제를 먼저 해소한다.** 현재 News test는 2023년인데 사용한 Qwen2.5는 그 이후 공개된 모델이므로, 모델이 pretraining 중 해당 뉴스와 이후 시장반응을 접했을 가능성을 배제할 수 없다. 따라서 현재 상관관계가 새로운 문서의 impact를 읽어낸 결과인지, 이미 알려진 사건을 recall한 결과인지 분리해야 한다. 모델의 학습 시점 이후 문서로 새로운 holdout을 만들거나, cutoff가 test보다 앞선 모델을 사용하고 axis와 layer를 validation에서 고정한 뒤 한 번만 평가한다.
+- **Embedding 대비 결과적 차별성을 강화한다.** 동일 label, split, Ridge tuning 조건에서 전용 embedding, LLM final-layer representation, 중간 activation과 Direct LLM을 비교한다. 단순 성능 차이뿐 아니라 embedding으로 설명되지 않는 activation residual, 문서 내 핵심 문장 식별, domain 간 전이에서 activation만의 추가 정보가 남는지 확인한다.
+- **Axis가 무엇을 포착하는지 통찰을 제시한다.** 숫자 규모, 불확실성, M&A·실적 충격 같은 사건 구조를 하나씩 바꾼 counterfactual과 token/sentence attribution을 통해 어떤 요소가 projection score를 변화시키는지 분석하고, 대표 성공·실패 사례를 함께 제시한다.
+- **Recall/familiarity를 직접 반영한 axis를 별도로 설계한다.** 현재 axis는 미래 market impact로 감독된 방향이므로 그 자체를 familiar/unfamiliar axis라고 부르기 어렵다. 모델이 학습 시점 이전에 반복적으로 접했을 가능성이 높은 사실과 cutoff 이후의 새로운 사실, 또는 recall 가능한 기업 지식과 충돌하는 사건을 통제된 contrast set으로 구성해 familiarity/knowledge-conflict axis를 먼저 추출한다. 이후 이 축이 market-impact axis와 어떤 관계가 있고 새로운 뉴스의 중요도 선별에 추가로 도움이 되는지 검증한다.
+
+위 네 항목 중에서는 **cutoff-safe holdout 재검증**이 가장 먼저 해결해야 할 조건이다. 이를 통과한 뒤 embedding 대비 차별성과 familiarity 축을 독립적으로 검증해야 현재 결과를 강한 논문 주장으로 발전시킬 수 있다.
+
 - 같은 ticker 안에서도 중요한 문서와 일상적인 문서를 구분하는지 정량·정성 분석을 보강한다.
 - 대규모 계약·합병처럼 잘 포착한 사례뿐 아니라, 반복된 후속 발표를 과대평가하거나 기업의 사업 전환을 놓친 실패 사례도 함께 분석한다.
 - Mean pooling 이외에 sentence/chunk score, max 또는 top-k pooling을 비교해 긴 문서에서 핵심 정보가 희석되는 문제를 확인한다.

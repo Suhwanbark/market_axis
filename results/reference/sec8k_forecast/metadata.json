@@ -1,0 +1,25 @@
+{
+  "label": "parkinson_market_adjusted_expansion",
+  "activation_layer": 27,
+  "ridge_alpha": 10.0,
+  "document_level": {
+    "embedding_validation_spearman": 0.5218917223223999,
+    "activation_validation_spearman": 0.5094695270518449,
+    "embedding_test_spearman": 0.41001951739379544,
+    "activation_test_spearman": 0.38126800170981967
+  },
+  "forecast_fit": "panel OLS on train+validation with ticker fixed effects",
+  "event_score_aggregation": "maximum document score per ticker/reaction session",
+  "comparison": [
+    "baseline",
+    "embedding",
+    "activation"
+  ],
+  "test_split": "2025",
+  "panel_counts": {
+    "test": 453,
+    "train": 399,
+    "val": 625
+  },
+  "gpu_used": false
+}

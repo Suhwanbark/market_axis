@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.npy
+*.npz
+*.parquet
+*.pt
+*.pth
+*.safetensors
+models/
+shared_cache/
+outputs/**/hf_cache/
+outputs/**/shards/
+outputs/**/activations/

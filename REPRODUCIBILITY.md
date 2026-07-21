@@ -185,3 +185,101 @@ provided embedding array for exact replay, and pin a revision in all new runs.
    date average.
 4. The original test periods were inspected repeatedly during exploration.
    Future confirmatory runs must freeze all choices before opening a fresh test.
+
+## 8. Cutoff-safe Llama 2 News run
+
+The cutoff-safe replication uses these pinned model revisions:
+
+```text
+NousResearch/Llama-2-7b-hf
+  8efe6c9b93655b934e27bd9981e3ec13e55aee9d
+
+BAAI/bge-m3
+  5617a9f61b028005a4858fdac845db406aefb181
+```
+
+The NousResearch repository is used as an ungated mirror of the base Llama 2
+weights.  No Chat/instruction-tuned checkpoint is used.  Place the snapshots at
+`models/llama2-7b-base` and `models/bge-m3`, then run:
+
+```bash
+export PYTHONPATH="$PWD/scripts:$PWD"
+bash scripts/run_news_cutoff_safe.sh
+```
+
+The run order is enforced in code:
+
+```text
+prepare data
+  -> BGE train/validation inference
+  -> Llama train/validation inference
+  -> validation-only layer/alpha selection and freeze
+  -> BGE/Llama 2023 test inference
+  -> document ranking and block bootstrap
+  -> AR/HAR/HAR-X/MIDAS forecasting
+```
+
+Primary outputs are written to:
+
+```text
+outputs/news_cutoff_safe_llama2/
+outputs/news_cutoff_safe_llama2_forecast/
+```
+
+The Llama arrays are split by train/validation/test.  Each has 32 layers and a
+4,096-dimensional hidden state.  GPU forward uses BF16 and arrays are stored as
+FP16.  BGE-M3 uses its 1,024-dimensional CLS state followed by L2
+normalization.  Both supervised comparisons use the same train-ticker
+centering, label, alpha grid, validation split, and test rows.
+
+## 9. No-ticker-centering News and 8-K runs
+
+The later capacity controls intentionally supersede the centering statement
+above for their own outputs: neither representation centroids nor label means
+are subtracted by ticker.  The raw target remains the market-adjusted
+Post-5/Pre-20 Parkinson log expansion.
+
+News outputs:
+
+```text
+outputs/news_uncentered_linear_control/
+outputs/news_qwen3_embedding_8b_control/
+outputs/news_uncentered_mlp_control/
+outputs/news_capacity_matched_forecast/
+outputs/news_uncentered_mlp_forecast/
+```
+
+The 8-K source is the public
+`Disclosures-SSRC/8k_disclosure_dataset` CSV pinned to revision
+`2370739fda5983b658556692b38a3b9bdbc5a0cb`.  Place it at:
+
+```text
+data/sec8k_disclosure_dataset/8k_all_data_with_text.csv
+```
+
+The 8-K runner enforces train/validation extraction, selection freeze, and only
+then test extraction:
+
+```bash
+export PYTHONPATH="$PWD/scripts:$PWD"
+bash scripts/run_sec8k_uncentered.sh
+```
+
+Primary 8-K outputs are:
+
+```text
+outputs/sec8k_uncentered/
+outputs/sec8k_uncentered_mlp/
+outputs/sec8k_uncentered_forecast/
+```
+
+Pinned model revisions are BGE-M3
+`5617a9f61b028005a4858fdac845db406aefb181`, Qwen3-Embedding-8B
+`1d8ad4ca9b3dd8059ad90a75d4983776a23d44af`, and base Llama 2 7B
+`8efe6c9b93655b934e27bd9981e3ec13e55aee9d`.  8-K inference uses the same
+cleaned first 5,000 characters for all models with a 2,048-token cap.  BGE and
+Qwen produce one embedding; Llama saves every layer as FP16.
+
+The public CSV contains filing dates but not SEC acceptance times.  The new
+8-K run maps each filing to the first ticker session strictly after its filing
+date.  It must not be described as an exact before/after-close event-time test.

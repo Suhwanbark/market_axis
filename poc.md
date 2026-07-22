@@ -288,32 +288,38 @@ QLIKE와 raw MSE는 각 baseline 대비 감소율(%)이며, raw R²는 baseline 
 
 ---
 
-## 9. 현재 해석
+## 9. 핵심 주장과 activation 우위의 해석
 
-현재 증거가 지지하는 주장은 다음과 같다.
+### 9.1 2023년 test를 위한 모델 선택
 
-> Cutoff-safe LLM의 중간 activation에는 뉴스가 기업의 비정상 변동성 확대에 미치는 정보를 포착하는 구조가 있고, 단순한 train-only Ridge axis만으로도 Embedding (0.5B), Embedding (7B), Direct LM보다 더 강한 forecasting signal을 얻는다.
+Test 데이터가 2023년이므로 activation 모델은 pretraining cutoff가 2022년 9월인 `Llama-2-7B Base`를 사용했다. Llama 2의 tuning 데이터는 2023년 7월까지 포함될 수 있으므로 Chat 모델은 사용하지 않았다. 이는 공개된 학습 기간을 기준으로 test 시점과의 직접적인 중첩을 통제하기 위한 선택이다. ([Llama 2](https://arxiv.org/abs/2307.09288))
 
-근거:
+### 9.2 현재 결과가 지지하는 주장
 
-- 동일 LLM checkpoint의 Direct rating은 실패했다.
-- 작은 MLP도 LLM activation Ridge를 이기지 못했다.
-- Embedding (0.5B, 7B)의 모든 레이어를 validation으로 선택해도 LLM activation이 높았다.
-- Market adjustment를 제거해도 activation correlation 우위가 유지됐다.
-- AR/HAR/HAR-X/MIDAS/LSTM과 H1/H5에서 QLIKE 우위가 유지됐다.
+현재 결과만으로 LLM 중간 activation이 더 좋은 **이론적·인과적 이유가 증명된 것은 아니다.** 따라서 다음과 같이 제한해서 주장한다.
 
-따라서 gain은 LLM에게 숫자를 직접 생성하게 해서 얻은 것이 아니라 **중간 activation에 포함된 정보를 supervised impact axis로 읽어낸 것**에 가깝다.
+> Market-impact 정보가 embedding에 없는 것이 아니라, 전용 embedding의 최종 output보다 LLM 중간 activation에서 단순한 linear probe로 더 쉽게 읽히는 형태로 표현될 수 있다.
 
----
+즉 핵심은 정보의 존재 여부가 아니라 **linear accessibility**다. 동일한 impact label과 Ridge probe를 적용했을 때 LLM L16의 Test Spearman은 0.1511로, 전 레이어를 탐색한 Embedding (0.5B)의 0.0896과 Embedding (7B)의 0.1032보다 높았다. 이 결과는 L16에서 market-impact signal이 더 선형적으로 분리된다는 경험적 증거지만, 그 원인 자체를 증명하지는 않는다.
 
-## 10. 해석상의 한계
+### 9.3 관련 선행연구가 보여준 것
 
-1. Embedding (0.5B, 7B)은 cutoff-safe 모델로 주장하지 않고 embedding control로만 사용한다.
-2. Embedding (7B)은 2023 이후 모델이므로 엄격한 temporal comparison에서는 LLM activation만 cutoff-safe하다.
-3. 전 레이어 탐색은 validation에서 수행했으므로 test leakage는 없지만, 레이어 수가 많아 validation multiple-selection 효과가 있을 수 있다.
-4. 최종 90행 forecasting 표는 point estimate이며 전체 family에 대한 paired bootstrap은 아직 붙이지 않았다.
-5. 이전 OLS-only MLP forecasting에는 2,000회 date-block bootstrap이 있으며 LLM activation gain은 유의했다.
-6. Embedding (0.5B) L19와 Embedding (7B) L28에 MLP를 다시 학습하는 조합은 아직 수행하지 않았다.
-7. 최신 full forecast run은 metric CSV 저장까지 완료됐지만 row-level prediction Parquet 저장이 ticker dtype 문제로 실패했다. 코드는 수정했으며 metric 결과에는 영향이 없다.
-8. Forecast classical model에는 ticker fixed effect가 있다. ticker effect까지 완전히 제거하지 않는 forecast가 필요하면 별도 control이 필요하다.
-9. Absolute post-volatility target의 높은 correlation은 document impact보다 firm identity를 반영할 가능성이 높다.
+| 선행연구 | 실제 실험 | 주요 결과 | 본 연구와의 연결 |
+|---|---|---|---|
+| [The Linear Representation Hypothesis and the Geometry of Large Language Models](https://openreview.net/forum?id=T0PoOJg8cK) | Llama-2에서 개념의 선형 표현을 분석하고 linear probing·steering과의 관계를 형식화 | 고수준 개념이 activation 공간의 방향으로 표현될 수 있음을 이론과 실험으로 보임 | Ridge 계수로 impact direction을 읽는 접근의 일반적 근거. Market impact 축 자체를 증명한 연구는 아님 |
+| [Layer by Layer](https://openreview.net/pdf?id=WGXb7UdvTX) | 여러 모델의 모든 layer output을 각각 embedding으로 사용해 32개 MTEB task에서 평가 | 중간 layer가 final layer보다 최대 16% 높은 성능을 보였고, 정보 압축과 signal 보존의 균형으로 이를 분석 | Task-relevant 정보가 반드시 final layer에서 가장 잘 드러나지는 않으며 layer sweep이 필요함을 지지 |
+| [Don’t Judge a Language Model by Its Last Layer](https://aclanthology.org/2022.coling-1.405/) | BERT 계열의 layer별 STS 성능을 비교하고 layer-wise attention pooling을 contrastive learning으로 학습 | 여러 layer의 신호를 결합하면 final layer만 사용할 때보다 STS·semantic search가 개선됨 | 문서 정보가 여러 layer에 분산되며 final output 하나로 충분하지 않을 수 있음을 지지 |
+| [InnerThoughts](https://arxiv.org/abs/2501.17994) | Llama 3의 마지막 token에 대한 모든 layer hidden state를 작은 predictor에 입력해 객관식 QA 평가 | 여러 benchmark에서 final output 또는 final hidden state만 사용할 때보다 성능이 향상됨 | 최종 출력에 충분히 드러나지 않은 task-relevant 정보가 내부 layer에 존재할 수 있음을 지지 |
+
+이 연구들은 모두 **중간 layer가 유용할 수 있다는 일반적 근거**를 제공한다. 그러나 금융 뉴스의 market impact가 왜 L16에서 더 잘 추출되는지를 직접 설명하거나 증명하지는 않는다.
+
+### 9.4 가능한 mechanism hypothesis와 검증
+
+전용 embedding은 주로 semantic similarity와 retrieval relevance에 맞게 학습된다. 따라서 같은 사건 유형 안의 규모, 확정성, surprise, novelty 차이가 최종 벡터에 존재하더라도 선형적으로 강하게 드러날 필요는 없다. 반면 autoregressive LLM은 next-token prediction 과정에서 숫자, 관계, 확정성, 사건 구조를 처리하므로, 특정 중간 layer에는 이러한 속성이 비교적 풍부하게 남아 있을 수 있다. 이는 현재 결과에 대한 **가설**이지 확인된 사실은 아니다. ([Qwen3 Embedding](https://arxiv.org/abs/2506.05176))
+
+이를 간접적으로 검증할 핵심 실험은 다음과 같다.
+
+1. **속성별 layer probe:** 규모·확정성·surprise·novelty를 각 layer에서 동일한 linear probe로 예측해 L16 우위가 어떤 속성에서 발생하는지 확인한다.
+2. **Paraphrase vs. impact edit:** 의미가 같은 표현 변경에는 score가 안정적이고, 규모·확정성처럼 impact가 달라지는 변경에는 선택적으로 반응하는지 비교한다.
+3. **Embedding-matched real pairs:** ticker·event category·semantic similarity가 비슷하지만 실제 impact가 다른 뉴스 쌍에서 high-impact 문서를 올바르게 순위화하는지 평가한다.
+4. **Probe-capacity test:** final embedding에 비선형 MLP를 붙였을 때 activation과의 격차가 줄어드는지 확인한다. 줄어들면 정보가 비선형적으로 얽힌 것이고, 유지되면 final output에서 신호가 더 크게 약화됐다는 해석을 지지한다.

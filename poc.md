@@ -104,6 +104,8 @@ $$
 
 **핵심 RQ:** LLM에게 직접 묻는 방법과 상용 embedding(0.5B, 7B)에 비해, LLM 중간 activation이 뉴스가 유발한 순수한 변동성 확대(기업의 평상시 변동성과 시장 전체 변동성 제외)를 더 잘 식별하는가?
 
+### 6.1 Ridge axis와 Direct LM
+
 | 방법 | Test Spearman ρ | Test Pearson |
 |---|---:|---:|
 | Direct LM | -0.0015 | -0.0006 |
@@ -113,6 +115,8 @@ $$
 
 Embedding은 통상적인 사용 방식인 최종 output 기준이다.
 
+### 6.2 Ridge axis: 전 레이어 탐색
+
 Embedding 모델에서도 모든 layer를 탐색하고 validation에서 가장 좋은 layer를 선택했을 때:
 
 | 방법 | 최종 output Test Spearman | 선택 layer | 선택 후 Test Spearman | 선택 후 Test Pearson |
@@ -120,6 +124,8 @@ Embedding 모델에서도 모든 layer를 탐색하고 validation에서 가장 �
 | Embedding (0.5B) | 0.0829 | L19/24 | 0.0896 | 0.1176 |
 | Embedding (7B) | 0.0893 | L28/36 | 0.1032 | 0.1247 |
 | LLM activation | — | L16/32 | **0.1511** | **0.1989** |
+
+### 6.3 간단한 forecasting MLP
 
 작은 MLP head로 impact score를 학습했을 때:
 
@@ -129,323 +135,170 @@ Embedding 모델에서도 모든 layer를 탐색하고 validation에서 가장 �
 | Embedding (7B) + MLP | 0.0910 | 0.1242 |
 | LLM activation (L16) + MLP | **0.1462** | **0.1895** |
 
-현재 MLP는 layer마다 학습하지 않았다. Embedding은 최종 output을 사용하고, LLM activation은 Ridge validation에서 선택된 L16을 사용했다. MLP에서는 각 representation별로 validation Spearman이 가장 높은 epoch를 선택하고 5개 seed의 예측을 평균했다. 따라서 MLP가 선택한 것은 layer가 아니라 epoch이며, 전 레이어 MLP 탐색은 아직 수행하지 않았다.
+---
+
+## 7. 최종 forecasting 설계
+
+- Forecast target: 뉴스일 이후 Parkinson variance의 H1 및 H5
+- Baseline: AR, HAR, HAR-X, MIDAS, LSTM
+- Regression: AR·MIDAS는 OLS, HAR·HAR-X는 OLS/Lasso/Ridge
+- 비교: 각 baseline과 동일 baseline에 Direct LM, Embedding(0.5B), Embedding(7B), LLM activation score를 추가한 모형
+- 선택 및 학습: validation에서 hyperparameter를 선택한 뒤 train+validation으로 최종 refit하고 test를 한 번 평가
+- 평가 지표: QLIKE, raw R², raw MSE
 
 ---
 
-## 7. Direct LM 실험
+## 8. 최종 forecasting 결과
 
-Activation과 동일한 Llama Base checkpoint에 문서가 기업의 평상시 수준 대비 유발할 변동성 크기를 1–9로 평가하도록 했다.
+QLIKE와 raw MSE는 각 baseline 대비 감소율(%)이며, raw R²는 baseline 대비 변화량(Δ)이다. 모두 높을수록 좋고 음수는 성능 악화를 뜻한다.
 
-Score 정의:
+### 8.1 H1: 1일 변동성
 
-1. 출력 후보를 숫자 token `1,...,9`로 제한
-2. 9개 token logit에 softmax 적용
-3. 숫자값의 확률 기대값 계산
+| Model | Metric | Direct LM | Embedding (0.5B) | Embedding (7B) | LLM activation |
+|---|---|---:|---:|---:|---:|
+| AR | QLIKE 개선률 | 0.18% | 2.72% | 2.93% | **3.97%** |
+|  | Δ raw R² | +0.00011 | +0.00326 | +0.00204 | **+0.00658** |
+|  | Raw MSE 개선률 | 0.01% | 0.41% | 0.26% | **0.83%** |
+| HAR/OLS | QLIKE 개선률 | 0.16% | 2.89% | 3.18% | **4.27%** |
+|  | Δ raw R² | +0.00003 | +0.00231 | +0.00140 | **+0.00465** |
+|  | Raw MSE 개선률 | 0.00% | 0.29% | 0.18% | **0.59%** |
+| HAR/Lasso | QLIKE 개선률 | 0.14% | 3.67% | 3.99% | **5.19%** |
+|  | Δ raw R² | +0.00010 | +0.00409 | +0.00329 | **+0.00533** |
+|  | Raw MSE 개선률 | 0.01% | 0.52% | 0.41% | **0.67%** |
+| HAR/Ridge | QLIKE 개선률 | 0.16% | 3.12% | 3.42% | **4.54%** |
+|  | Δ raw R² | +0.00009 | +0.00273 | +0.00202 | **+0.00467** |
+|  | Raw MSE 개선률 | 0.01% | 0.35% | 0.26% | **0.59%** |
+| HAR-X/OLS | QLIKE 개선률 | 0.27% | 2.86% | 3.14% | **4.20%** |
+|  | Δ raw R² | -0.00028 | +0.00335 | +0.00430 | **+0.00632** |
+|  | Raw MSE 개선률 | -0.04% | 0.43% | 0.55% | **0.80%** |
+| HAR-X/Lasso | QLIKE 개선률 | 0.27% | 1.50% | 0.95% | **2.09%** |
+|  | Δ raw R² | -0.00027 | **+0.00251** | -0.00574 | -0.00529 |
+|  | Raw MSE 개선률 | -0.03% | **0.32%** | -0.73% | -0.67% |
+| HAR-X/Ridge | QLIKE 개선률 | 0.25% | 3.13% | 3.41% | **4.53%** |
+|  | Δ raw R² | -0.00035 | +0.00322 | +0.00410 | **+0.00550** |
+|  | Raw MSE 개선률 | -0.04% | 0.41% | 0.52% | **0.70%** |
+| MIDAS/OLS | QLIKE 개선률 | 0.22% | 3.03% | 3.25% | **4.36%** |
+|  | Δ raw R² | +0.00025 | +0.00348 | +0.00217 | **+0.00626** |
+|  | Raw MSE 개선률 | 0.03% | 0.44% | 0.27% | **0.79%** |
+| LSTM | QLIKE 개선률 | 0.44% | 3.82% | 3.38% | **5.45%** |
+|  | Δ raw R² | +0.00050 | +0.00905 | +0.00538 | **+0.01175** |
+|  | Raw MSE 개선률 | 0.06% | 1.11% | 0.66% | **1.44%** |
 
-$$
-score_{direct}=\sum_{k=1}^{9} k\,P(k\mid document,prompt)
-$$
+<details>
+<summary>H1 raw-scale 절대 성능 보기</summary>
 
-Label은 전혀 사용하지 않는 zero-shot baseline이다.
+| Model | Metric | Baseline | Direct LM | Embedding (0.5B) | Embedding (7B) | LLM activation |
+|---|---|---:|---:|---:|---:|---:|
+| AR | QLIKE | 0.37054 | 0.36987 | 0.36047 | 0.35968 | **0.35581** |
+|  | Raw R² | 0.20918 | 0.20929 | 0.21244 | 0.21121 | **0.21575** |
+|  | Raw MSE | 9.499e-08 | 9.497e-08 | 9.459e-08 | 9.474e-08 | **9.420e-08** |
+| HAR/OLS | QLIKE | 0.37504 | 0.37445 | 0.36420 | 0.36313 | **0.35904** |
+|  | Raw R² | 0.21691 | 0.21695 | 0.21922 | 0.21831 | **0.22156** |
+|  | Raw MSE | 9.406e-08 | 9.405e-08 | 9.378e-08 | 9.389e-08 | **9.350e-08** |
+| HAR/Lasso | QLIKE | 0.38486 | 0.38434 | 0.37073 | 0.36949 | **0.36487** |
+|  | Raw R² | 0.20766 | 0.20776 | 0.21174 | 0.21094 | **0.21299** |
+|  | Raw MSE | 9.517e-08 | 9.516e-08 | 9.468e-08 | 9.477e-08 | **9.453e-08** |
+| HAR/Ridge | QLIKE | 0.37734 | 0.37674 | 0.36555 | 0.36443 | **0.36020** |
+|  | Raw R² | 0.21406 | 0.21415 | 0.21679 | 0.21607 | **0.21873** |
+|  | Raw MSE | 9.440e-08 | 9.439e-08 | 9.407e-08 | 9.416e-08 | **9.384e-08** |
+| HAR-X/OLS | QLIKE | 0.36737 | 0.36639 | 0.35686 | 0.35582 | **0.35193** |
+|  | Raw R² | 0.21496 | 0.21468 | 0.21831 | 0.21926 | **0.22128** |
+|  | Raw MSE | 9.429e-08 | 9.433e-08 | 9.389e-08 | 9.378e-08 | **9.353e-08** |
+| HAR-X/Lasso | QLIKE | 0.36752 | 0.36654 | 0.36201 | 0.36404 | **0.35985** |
+|  | Raw R² | 0.21507 | 0.21480 | **0.21758** | 0.20933 | 0.20978 |
+|  | Raw MSE | 9.428e-08 | 9.431e-08 | **9.398e-08** | 9.497e-08 | 9.491e-08 |
+| HAR-X/Ridge | QLIKE | 0.36935 | 0.36841 | 0.35778 | 0.35675 | **0.35261** |
+|  | Raw R² | 0.21510 | 0.21475 | 0.21832 | 0.21920 | **0.22060** |
+|  | Raw MSE | 9.427e-08 | 9.432e-08 | 9.389e-08 | 9.378e-08 | **9.361e-08** |
+| MIDAS/OLS | QLIKE | 0.37840 | 0.37756 | 0.36694 | 0.36610 | **0.36190** |
+|  | Raw R² | 0.20894 | 0.20919 | 0.21242 | 0.21111 | **0.21520** |
+|  | Raw MSE | 9.502e-08 | 9.499e-08 | 9.460e-08 | 9.475e-08 | **9.426e-08** |
+| LSTM | QLIKE | 0.38008 | 0.37839 | 0.36558 | 0.36723 | **0.35935** |
+|  | Raw R² | 0.18471 | 0.18521 | 0.19376 | 0.19010 | **0.19646** |
+|  | Raw MSE | 9.793e-08 | 9.786e-08 | 9.684e-08 | 9.728e-08 | **9.651e-08** |
 
-추출 설정:
+</details>
 
-- 동일 Llama-2-7B Base checkpoint
-- 최대 document 길이 512
-- 두 개의 단일-GPU vLLM replica
-- GPU memory utilization 0.85
-- Train/Validation/Test 전 split 추출
+### 8.2 H5: 5일 변동성
 
-News test score 분포:
+| Model | Metric | Direct LM | Embedding (0.5B) | Embedding (7B) | LLM activation |
+|---|---|---:|---:|---:|---:|
+| AR | QLIKE 개선률 | ~0% | 1.34% | 0.25% | **4.16%** |
+|  | Δ raw R² | +0.00001 | +0.00279 | -0.01303 | **+0.01383** |
+|  | Raw MSE 개선률 | 0.00% | 0.50% | -2.32% | **2.47%** |
+| HAR/OLS | QLIKE 개선률 | ~0% | 1.66% | 0.65% | **4.84%** |
+|  | Δ raw R² | +0.00008 | +0.00210 | -0.01169 | **+0.01148** |
+|  | Raw MSE 개선률 | 0.01% | 0.40% | -2.22% | **2.18%** |
+| HAR/Lasso | QLIKE 개선률 | ~0% | 2.35% | 0.00% | **5.16%** |
+|  | Δ raw R² | -0.00003 | +0.00325 | -0.01691 | **+0.00979** |
+|  | Raw MSE 개선률 | -0.01% | 0.61% | -3.18% | **1.84%** |
+| HAR/Ridge | QLIKE 개선률 | ~0% | 1.85% | 0.81% | **4.94%** |
+|  | Δ raw R² | +0.00001 | +0.00256 | -0.00990 | **+0.01044** |
+|  | Raw MSE 개선률 | 0.00% | 0.49% | -1.88% | **1.99%** |
+| HAR-X/OLS | QLIKE 개선률 | 0.02% | 1.57% | 0.49% | **4.66%** |
+|  | Δ raw R² | +0.00003 | +0.00371 | -0.00486 | **+0.01281** |
+|  | Raw MSE 개선률 | 0.01% | 0.73% | -0.96% | **2.53%** |
+| HAR-X/Lasso | QLIKE 개선률 | 0.01% | 2.27% | 3.11% | **5.09%** |
+|  | Δ raw R² | +0.00007 | +0.00298 | +0.00223 | **+0.00933** |
+|  | Raw MSE 개선률 | 0.01% | 0.58% | 0.44% | **1.83%** |
+| HAR-X/Ridge | QLIKE 개선률 | 0.02% | 1.74% | 0.41% | **4.76%** |
+|  | Δ raw R² | +0.00005 | +0.00324 | -0.00576 | **+0.01046** |
+|  | Raw MSE 개선률 | 0.01% | 0.64% | -1.15% | **2.08%** |
+| MIDAS/OLS | QLIKE 개선률 | ~0% | 1.62% | 0.40% | **4.73%** |
+|  | Δ raw R² | -0.00011 | +0.00310 | -0.01229 | **+0.01207** |
+|  | Raw MSE 개선률 | -0.02% | 0.58% | -2.32% | **2.28%** |
+| LSTM | QLIKE 개선률 | 0.11% | 2.35% | 0.52% | **4.79%** |
+|  | Δ raw R² | +0.00070 | +0.00410 | -0.00523 | **+0.01751** |
+|  | Raw MSE 개선률 | 0.12% | 0.72% | -0.91% | **3.05%** |
 
-- 평균: 5.219
-- 표준편차: 0.347
-- 범위: 3.326–7.215
+<details>
+<summary>H5 raw-scale 절대 성능 보기</summary>
 
-출력이 collapse한 것은 아니지만 impact test Spearman은 `-0.0015`로 사실상 0이다. Base 모델은 explicit instruction following이 약하기 때문에 hidden activation에는 정보가 있어도 직접 1–9 rating에는 실패한 것으로 해석한다.
+| Model | Metric | Baseline | Direct LM | Embedding (0.5B) | Embedding (7B) | LLM activation |
+|---|---|---:|---:|---:|---:|---:|
+| AR | QLIKE | 0.15284 | 0.15284 | 0.15079 | 0.15246 | **0.14648** |
+|  | Raw R² | 0.43948 | 0.43949 | 0.44228 | 0.42646 | **0.45332** |
+|  | Raw MSE | 2.473e-08 | 2.473e-08 | 2.460e-08 | 2.530e-08 | **2.412e-08** |
+| HAR/OLS | QLIKE | 0.15098 | 0.15098 | 0.14847 | 0.15001 | **0.14368** |
+|  | Raw R² | 0.47253 | 0.47261 | 0.47464 | 0.46084 | **0.48401** |
+|  | Raw MSE | 2.327e-08 | 2.327e-08 | 2.318e-08 | 2.378e-08 | **2.276e-08** |
+| HAR/Lasso | QLIKE | 0.15504 | 0.15505 | 0.15140 | 0.15504 | **0.14704** |
+|  | Raw R² | 0.46838 | 0.46836 | 0.47163 | 0.45147 | **0.47817** |
+|  | Raw MSE | 2.345e-08 | 2.345e-08 | 2.331e-08 | 2.420e-08 | **2.302e-08** |
+| HAR/Ridge | QLIKE | 0.15197 | 0.15197 | 0.14916 | 0.15073 | **0.14446** |
+|  | Raw R² | 0.47415 | 0.47416 | 0.47671 | 0.46425 | **0.48460** |
+|  | Raw MSE | 2.320e-08 | 2.320e-08 | 2.308e-08 | 2.363e-08 | **2.274e-08** |
+| HAR-X/OLS | QLIKE | 0.14512 | 0.14509 | 0.14284 | 0.14441 | **0.13836** |
+|  | Raw R² | 0.49449 | 0.49452 | 0.49820 | 0.48963 | **0.50730** |
+|  | Raw MSE | 2.230e-08 | 2.230e-08 | 2.214e-08 | 2.251e-08 | **2.173e-08** |
+| HAR-X/Lasso | QLIKE | 0.14888 | 0.14887 | 0.14550 | 0.14426 | **0.14130** |
+|  | Raw R² | 0.48865 | 0.48872 | 0.49163 | 0.49088 | **0.49798** |
+|  | Raw MSE | 2.256e-08 | 2.255e-08 | 2.243e-08 | 2.246e-08 | **2.215e-08** |
+| HAR-X/Ridge | QLIKE | 0.14548 | 0.14545 | 0.14295 | 0.14488 | **0.13856** |
+|  | Raw R² | 0.49696 | 0.49701 | 0.50019 | 0.49119 | **0.50742** |
+|  | Raw MSE | 2.219e-08 | 2.219e-08 | 2.205e-08 | 2.245e-08 | **2.173e-08** |
+| MIDAS/OLS | QLIKE | 0.15146 | 0.15146 | 0.14901 | 0.15085 | **0.14429** |
+|  | Raw R² | 0.47061 | 0.47050 | 0.47371 | 0.45832 | **0.48268** |
+|  | Raw MSE | 2.335e-08 | 2.336e-08 | 2.322e-08 | 2.390e-08 | **2.282e-08** |
+| LSTM | QLIKE | 0.15567 | 0.15550 | 0.15202 | 0.15486 | **0.14821** |
+|  | Raw R² | 0.42680 | 0.42751 | 0.43091 | 0.42157 | **0.44432** |
+|  | Raw MSE | 2.529e-08 | 2.525e-08 | 2.510e-08 | 2.552e-08 | **2.451e-08** |
 
-결과 파일:
-
-- `outputs/direct_llama2_rating/all_scores.parquet`
-- `outputs/direct_llama2_rating/manifest.json`
-
----
-
-## 8. Ticker-centering 민감도
-
-초기 실험에서는 train ticker별 representation centroid와 label 평균을 제거했다.
-
-| 조건 | BGE test ρ | Llama test ρ | Llama 선택층 |
-|---|---:|---:|---:|
-| Ticker-centered 초기 실험 | 0.0904 | 0.1628 | 17 |
-| 최종 uncentered 실험 | 0.0829 | 0.1511 | 16 |
-
-Centering하면 correlation이 조금 올라가지만 최종 사용자 요청에 따라 uncentered 결과를 본 결과로 사용한다.
-
----
-
-## 9. MLP impact head 실험
-
-단순 Ridge 대신 각 frozen representation 위에 작은 MLP head를 학습했다.
-
-Architecture:
-
-```text
-Linear(input, 64)
-→ GELU
-→ Dropout(0.1)
-→ Linear(64, 1)
-```
-
-학습 설정:
-
-- Optimizer: AdamW
-- Learning rate: 0.001
-- Weight decay: 0.001
-- Batch size: 512
-- Max epochs: 200
-- Early stopping: validation Spearman, patience 15
-- Seeds: 20260721, 20260722, 20260723, 20260724, 20260725
-- 최종 score: 5개 seed prediction의 산술평균
-- Target: train global mean/std로 표준화
-- 학습 중 test representation/label 미사용
-
-Impact correlation:
-
-| 표현 | Ridge test ρ | MLP test ρ | MLP 변화 |
-|---|---:|---:|---:|
-| BGE final | 0.0829 | 0.0877 | +0.0048 |
-| Qwen final | 0.0893 | 0.0910 | +0.0017 |
-| Llama L16 | **0.1511** | 0.1462 | -0.0049 |
-
-이전 OLS forecasting 8개 설정의 평균 QLIKE 개선:
-
-| Score | 평균 QLIKE 개선 |
-|---|---:|
-| Llama Ridge | **4.40%** |
-| Llama MLP | 3.93% |
-| Qwen MLP | 2.70% |
-| Qwen Ridge | 2.36% |
-| BGE MLP | 2.19% |
-| BGE Ridge | 1.48% |
-
-해석:
-
-- MLP는 BGE/Qwen embedding에는 소폭 도움
-- Llama activation에서는 단순 Ridge가 MLP보다 강함
-- 비선형 head가 activation의 우위를 설명하지 않음
-
-주의: 이 MLP 실험의 BGE/Qwen 입력은 당시의 최종층 embedding이다. 이후 선택한 BGE L19/Qwen L28에 MLP를 다시 붙이는 실험은 아직 하지 않았다.
-
-결과 파일:
-
-- `outputs/news_uncentered_mlp_control/test_metrics.csv`
-- `outputs/news_uncentered_mlp_control/selection.json`
-- `outputs/news_uncentered_mlp_forecast/forecast_results.csv`
-
----
-
-## 10. Target 민감도
-
-### 10.1 시장 조정 제거
-
-기존 score를 고정하고 market term만 제거한 `firm_log_expansion`과 비교했다.
-
-| Score | 기존 market-adjusted ρ | Market 제거 ρ |
-|---|---:|---:|
-| BGE | 0.0829 | 0.0859 |
-| Qwen | 0.0893 | 0.0902 |
-| Llama | 0.1511 | 0.1507 |
-
-거의 변하지 않는다. Activation 우위가 market adjustment 항 때문에 생긴 것은 아니다.
-
-### 10.2 기업 평상시 변동성 정규화 제거: 기존 axis 고정
-
-| Target | BGE ρ | Qwen ρ | Llama ρ |
-|---|---:|---:|---:|
-| `log(firm post5)` | 0.0616 | 0.0675 | **0.0859** |
-| Market-adjusted post level | 0.0549 | 0.0566 | **0.0717** |
-
-기존 impact axis는 평상시 변동성 정규화를 제거한 absolute post level과는 correlation이 낮다.
-
-### 10.3 기업 평상시 변동성 정규화 제거: axis 재학습
-
-Absolute post-level target으로 axis를 train/validation에서 다시 학습했다.
-
-| 재학습 target | BGE test ρ | Qwen test ρ | Llama test ρ |
-|---|---:|---:|---:|
-| `log(firm post5)` | 0.4979 | **0.5766** | 0.5731 |
-| `0.5[log firm post5 − log market post5]` | 0.5708 | 0.6283 | **0.6308** |
-
-수치는 0.6까지 올라가지만, 이 target은 기업의 정상 변동성 수준과 ticker identity를 학습하기 쉽다. 따라서 document impact보다 “원래 변동성이 큰 기업 식별”에 가까우며 본 결과와 분리한다.
-
-결과 파일:
-
-- `outputs/news_no_firm_vol_normalization_frozen_score.csv`
-- `outputs/no_firm_vol_normalization_refit/news_test_metrics.csv`
+</details>
 
 ---
 
-## 11. 최종 forecasting 설계
-
-### 11.1 Forecast target
-
-- H1: 뉴스일 다음 실제 거래일의 Parkinson variance
-- H5: 뉴스일 다음 5개 실제 거래일 Parkinson variance 평균
-- Forecast model은 log variance를 학습하고 예측값을 raw variance로 변환
-- 모든 score variant는 동일한 test row에서 비교
-
-### 11.2 Forecast baseline
-
-#### AR(5)
-
-- 직전 5개 일별 log Parkinson variance
-- Forecast regression: OLS
-
-#### HAR
-
-- Daily log volatility
-- Weekly 5일 평균 log volatility
-- Monthly 22일 평균 log volatility
-- Forecast regression: OLS, Lasso, Ridge
-
-#### HAR-X
-
-HAR feature에 다음 변수를 추가한다.
-
-- 절대수익률
-- 음의 수익률
-- 20일 momentum
-- 동일가중 시장 HAR daily/weekly/monthly
-- Forecast regression: OLS, Lasso, Ridge
-
-#### MIDAS
-
-- Lag 후보: 30, 50, 80
-- Beta weight theta 후보: 1, 1.5, 2, 3, 5, 10
-- Validation QLIKE로 lag/theta 선택
-- H1 선택: `k=50, theta=10`
-- H5 선택: `k=80, theta=10`
-- Forecast regression: OLS
-
-#### LSTM
-
-- 입력: 최근 7일 log Parkinson sequence
-- 3-layer LSTM
-- Hidden size: 16
-- Dropout: 0.1
-- Ticker embedding: 4d
-- Document score: 1d
-- Head: `Linear(21,16) → ReLU → Linear(16,1)`
-- Batch size: 2,048
-- Adam, lr 0.001, weight decay 1e-5
-- Max epochs: 50
-- Validation QLIKE early stopping, patience 7
-- Seeds: 11, 22, 33, 44, 55
-- Validation-selected epoch만큼 train+validation에서 refit
-- 5개 seed prediction 평균
-
-### 11.3 Classical forecast fitting
-
-- Numeric feature: median imputation + standardization
-- Ticker: one-hot fixed effect
-- Target: log future variance
-- OLS: train+validation fitting
-- Lasso/Ridge:
-  1. train fitting
-  2. validation QLIKE로 alpha 선택
-  3. train+validation refit
-
-Lasso grid:
-
-```text
-1e-5, 1e-4, 1e-3, 1e-2, 1e-1
-```
-
-Ridge grid:
-
-```text
-0.01, 0.1, 1, 10, 100
-```
-
-### 11.4 평가 지표
-
-- QLIKE: 낮을수록 좋음
-- Raw R²: 높을수록 좋음
-- Raw MSE: 낮을수록 좋음
-
-QLIKE 정의:
-
-$$
-QLIKE(y,\hat y)=\frac{y}{\hat y}-\log\left(\frac{y}{\hat y}\right)-1
-$$
-
----
-
-## 12. 최종 forecasting 결과
-
-아래 값은 각 forecast family의 baseline 대비 QLIKE 감소율이다. 높을수록 좋다.
-
-| Model | H | BGE | Qwen | Llama | Direct LM |
-|---|---:|---:|---:|---:|---:|
-| AR/OLS | 1 | 2.72% | 2.93% | **3.97%** | 0.18% |
-| HAR/OLS | 1 | 2.89% | 3.18% | **4.27%** | 0.16% |
-| HAR/Lasso | 1 | 3.67% | 3.99% | **5.19%** | 0.14% |
-| HAR/Ridge | 1 | 3.12% | 3.42% | **4.54%** | 0.16% |
-| HAR-X/OLS | 1 | 2.86% | 3.14% | **4.20%** | 0.27% |
-| HAR-X/Lasso | 1 | 1.50% | 0.95% | **2.09%** | 0.27% |
-| HAR-X/Ridge | 1 | 3.13% | 3.41% | **4.53%** | 0.25% |
-| MIDAS/OLS | 1 | 3.03% | 3.25% | **4.36%** | 0.22% |
-| LSTM | 1 | 3.82% | 3.38% | **5.45%** | 0.44% |
-| AR/OLS | 5 | 1.34% | 0.25% | **4.16%** | ~0% |
-| HAR/OLS | 5 | 1.66% | 0.65% | **4.84%** | ~0% |
-| HAR/Lasso | 5 | 2.35% | ~0% | **5.16%** | ~0% |
-| HAR/Ridge | 5 | 1.85% | 0.81% | **4.94%** | ~0% |
-| HAR-X/OLS | 5 | 1.57% | 0.49% | **4.66%** | 0.02% |
-| HAR-X/Lasso | 5 | 2.27% | 3.11% | **5.09%** | 0.01% |
-| HAR-X/Ridge | 5 | 1.74% | 0.41% | **4.76%** | 0.02% |
-| MIDAS/OLS | 5 | 1.62% | 0.41% | **4.73%** | ~0% |
-| LSTM | 5 | 2.35% | 0.52% | **4.79%** | 0.11% |
-
-Llama activation은 총 18개 설정 모두 QLIKE point estimate 기준 1위다.
-
-전체 설정 평균:
-
-| Score | 평균 QLIKE 개선 | 평균 Δ raw R² | 평균 raw MSE 개선 |
-|---|---:|---:|---:|
-| Llama activation | **4.54%** | **+0.00853** | **1.44%** |
-| BGE best layer | 2.42% | +0.00343 | 0.53% |
-| Qwen best layer | 1.91% | -0.00325 | -0.67% |
-| Direct LM | 0.12% | +0.00006 | 0.01% |
-
-주의:
-
-- QLIKE에서는 Llama가 매우 일관적이다.
-- H1 HAR-X/Lasso에서는 Llama가 QLIKE를 개선하지만 raw R²/MSE는 악화된다.
-- 따라서 모든 지표의 모든 조합에서 무조건 개선된다고 표현하면 안 된다.
-- 여기서의 비교는 각 family의 `baseline`과 해당 family의 `baseline + score` 비교다.
-
-결과 파일:
-
-- `outputs/full_forecast_method_table/full_results_long.csv`
-- `outputs/full_forecast_method_table/comparison_table.csv`
-- `outputs/full_forecast_method_table/table_news_h1.csv`
-- `outputs/full_forecast_method_table/table_news_h5.csv`
-
----
-
-## 13. 현재 해석
+## 9. 현재 해석
 
 현재 증거가 지지하는 주장은 다음과 같다.
 
-> Cutoff-safe Llama-2 Base의 중간 hidden activation에는 뉴스가 기업의 비정상 변동성 확대에 미치는 정보를 포착하는 구조가 있고, 단순한 train-only Ridge axis만으로도 같은 크기의 Qwen embedding, BGE embedding, 명시적 Direct LM rating보다 더 강한 forecasting signal을 얻는다.
+> Cutoff-safe LLM의 중간 activation에는 뉴스가 기업의 비정상 변동성 확대에 미치는 정보를 포착하는 구조가 있고, 단순한 train-only Ridge axis만으로도 Embedding (0.5B), Embedding (7B), Direct LM보다 더 강한 forecasting signal을 얻는다.
 
 근거:
 
-- 동일 Llama checkpoint의 Direct rating은 실패했다.
-- 작은 MLP도 Llama Ridge를 이기지 못했다.
-- BGE/Qwen의 모든 레이어를 validation으로 선택해도 Llama activation이 높았다.
+- 동일 LLM checkpoint의 Direct rating은 실패했다.
+- 작은 MLP도 LLM activation Ridge를 이기지 못했다.
+- Embedding (0.5B, 7B)의 모든 레이어를 validation으로 선택해도 LLM activation이 높았다.
 - Market adjustment를 제거해도 activation correlation 우위가 유지됐다.
 - AR/HAR/HAR-X/MIDAS/LSTM과 H1/H5에서 QLIKE 우위가 유지됐다.
 
@@ -453,81 +306,14 @@ Llama activation은 총 18개 설정 모두 QLIKE point estimate 기준 1위다.
 
 ---
 
-## 14. 해석상의 한계
+## 10. 해석상의 한계
 
-1. BGE/Qwen은 cutoff-safe 모델로 주장하지 않고 embedding control로만 사용한다.
-2. Qwen3-Embedding-8B는 2023 이후 모델이므로 엄격한 temporal comparison에서 Llama만 cutoff-safe하다.
+1. Embedding (0.5B, 7B)은 cutoff-safe 모델로 주장하지 않고 embedding control로만 사용한다.
+2. Embedding (7B)은 2023 이후 모델이므로 엄격한 temporal comparison에서는 LLM activation만 cutoff-safe하다.
 3. 전 레이어 탐색은 validation에서 수행했으므로 test leakage는 없지만, 레이어 수가 많아 validation multiple-selection 효과가 있을 수 있다.
 4. 최종 90행 forecasting 표는 point estimate이며 전체 family에 대한 paired bootstrap은 아직 붙이지 않았다.
-5. 이전 OLS-only MLP forecasting에는 2,000회 date-block bootstrap이 있으며 Llama gain은 유의했다.
-6. BGE L19/Qwen L28에 MLP를 다시 학습하는 조합은 아직 수행하지 않았다.
+5. 이전 OLS-only MLP forecasting에는 2,000회 date-block bootstrap이 있으며 LLM activation gain은 유의했다.
+6. Embedding (0.5B) L19와 Embedding (7B) L28에 MLP를 다시 학습하는 조합은 아직 수행하지 않았다.
 7. 최신 full forecast run은 metric CSV 저장까지 완료됐지만 row-level prediction Parquet 저장이 ticker dtype 문제로 실패했다. 코드는 수정했으며 metric 결과에는 영향이 없다.
 8. Forecast classical model에는 ticker fixed effect가 있다. ticker effect까지 완전히 제거하지 않는 forecast가 필요하면 별도 control이 필요하다.
 9. Absolute post-volatility target의 높은 correlation은 document impact보다 firm identity를 반영할 가능성이 높다.
-
----
-
-## 15. 현재 범위에서 제외한 항목
-
-### 15.1 8-K
-
-8-K representation, impact axis, MLP, forecasting 관련 파일은 남아 있지만 사용자 최종 지시에 따라 다음에서 제외한다.
-
-- 최종 표
-- 본문 결론
-- News activation 대 embedding 비교 주장
-
-삭제하지 않고 archive로만 유지한다.
-
-### 15.2 Llama-2 Chat/IT
-
-Llama-2 Chat/IT는 full 2023 News test에 cutoff-safe하지 않아 본 실험에서 사용하지 않았다. 현재 activation과 Direct LM은 모두 Llama-2-7B Base다.
-
----
-
-## 16. 다음 실험 후보
-
-아직 실행하지 않은 후보를 우선순위 없이 기록한다.
-
-- [ ] BGE L19와 Qwen L28에 MLP impact head 재학습
-- [ ] 최종 18개 forecast 설정에 date-block bootstrap/Diebold-Mariano 계열 inference 추가
-- [ ] 최신 full forecast의 row-level prediction Parquet 재생성
-- [ ] Forecast model의 ticker fixed effect 제거 control
-- [ ] Activation layer 주변부(L14–L18) stability 및 seed/bootstrap 분석
-- [ ] Score를 연속값 하나가 아니라 여러 activation axis/subspace로 확장
-- [ ] 동일 cutoff-safe 세대의 다른 Base LLM으로 activation 결과 재현
-
----
-
-## 17. 주요 코드와 결과 경로
-
-### 코드
-
-- `scripts/news_cutoff_safe_llama2.py`
-- `scripts/news_uncentered_linear_control.py`
-- `scripts/news_large_embedding_control.py`
-- `scripts/embedding_intermediate_layer_control.py`
-- `scripts/news_uncentered_mlp_control.py`
-- `scripts/news_mlp_forecast.py`
-- `scripts/direct_llama2_rating.py`
-- `scripts/direct_llama2_rating_vllm.py`
-- `scripts/no_firm_vol_normalization_refit.py`
-- `scripts/full_forecast_method_table.py`
-
-### 핵심 결과
-
-- `outputs/news_uncentered_mlp_control/test_metrics.csv`
-- `outputs/news_uncentered_mlp_forecast/forecast_results.csv`
-- `outputs/direct_llama2_rating/all_scores.parquet`
-- `outputs/no_firm_vol_normalization_refit/news_test_metrics.csv`
-- `outputs/full_forecast_method_table/comparison_table.csv`
-
----
-
-## 18. 변경 기록
-
-### 2026-07-22
-
-- 현재까지의 News 데이터, target, representation, layer selection, MLP, Direct LM, target sensitivity, forecasting 설정과 결과를 최초 E2E 문서화
-- 8-K를 최종 범위에서 제외
-- 이후 실험은 이 문서를 기준으로 계속 누적 수정

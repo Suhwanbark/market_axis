@@ -45,13 +45,7 @@
 
 ## 3. 주 target: document impact
 
-$$
-y_{i,t}=\frac12\left[
-\log\frac{firm\_post5}{firm\_pre20}
--
-\log\frac{market\_post5}{market\_pre20}
-\right]
-$$
+$$ y_{i,t}=\frac{1}{2}\left[\log\left(\frac{\operatorname{FirmPost5}_{i,t}}{\operatorname{FirmPre20}_{i,t}}\right)-\log\left(\frac{\operatorname{MarketPost5}_{t}}{\operatorname{MarketPre20}_{t}}\right)\right] $$
 
 예를 들어 어떤 기업의 변동성이 평소 대비 50% 증가했지만 같은 기간 시장 전체 변동성도 10% 증가했다면, impact label은 시장 공통 상승분을 제외한 기업 고유의 추가 변동성 충격을 나타낸다. 값이 클수록 해당 뉴스가 기업에 더 큰 고유 변동성 충격을 준 것으로 해석한다.
 

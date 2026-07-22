@@ -313,13 +313,12 @@ Test 데이터가 2023년이므로 activation 모델은 pretraining cutoff가 20
 
 이 연구들은 모두 **중간 layer가 유용할 수 있다는 일반적 근거**를 제공한다. 그러나 금융 뉴스의 market impact가 왜 L16에서 더 잘 추출되는지를 직접 설명하거나 증명하지는 않는다.
 
-### 9.4 가능한 mechanism hypothesis와 검증
+### 9.4 가능한 mechanism hypothesis
 
 전용 embedding은 주로 semantic similarity와 retrieval relevance에 맞게 학습된다. 따라서 같은 사건 유형 안의 규모, 확정성, surprise, novelty 차이가 최종 벡터에 존재하더라도 선형적으로 강하게 드러날 필요는 없다. 반면 autoregressive LLM은 next-token prediction 과정에서 숫자, 관계, 확정성, 사건 구조를 처리하므로, 특정 중간 layer에는 이러한 속성이 비교적 풍부하게 남아 있을 수 있다. 이는 현재 결과에 대한 **가설**이지 확인된 사실은 아니다. ([Qwen3 Embedding](https://arxiv.org/abs/2506.05176))
 
-이를 간접적으로 검증할 핵심 실험은 다음과 같다.
+### 9.5 추후 연구 방향: parametric recall과 surprise
 
-1. **속성별 layer probe:** 규모·확정성·surprise·novelty를 각 layer에서 동일한 linear probe로 예측해 L16 우위가 어떤 속성에서 발생하는지 확인한다.
-2. **Paraphrase vs. impact edit:** 의미가 같은 표현 변경에는 score가 안정적이고, 규모·확정성처럼 impact가 달라지는 변경에는 선택적으로 반응하는지 비교한다.
-3. **Embedding-matched real pairs:** ticker·event category·semantic similarity가 비슷하지만 실제 impact가 다른 뉴스 쌍에서 high-impact 문서를 올바르게 순위화하는지 평가한다.
-4. **Probe-capacity test:** final embedding에 비선형 MLP를 붙였을 때 activation과의 격차가 줄어드는지 확인한다. 줄어들면 정보가 비선형적으로 얽힌 것이고, 유지되면 final output에서 신호가 더 크게 약화됐다는 해석을 지지한다.
+본 연구의 원래 목적은 LLM이 특정 ticker나 사건에 대해 보유한 parametric prior가 뉴스를 읽을 때 recall되어 특정 activation direction을 강하게 활성화하는지, 반대로 prior와 맞지 않는 정보가 그 방향에서 이탈해 surprise로 나타나는지를 확인하고, 이렇게 추출한 recall/surprise axis를 실제 market impact와 volatility forecasting에 사용하는 것이다.
+
+[Do LLMs Really Know What They Don’t Know?](https://arxiv.org/abs/2510.09033)은 hidden state가 출력의 진실성보다 subject와 관련된 parametric knowledge의 recall 여부를 주로 반영한다고 보고하며, 금융 뉴스에서도 ticker/entity 관련 recall axis와 그 axis에서 벗어나는 surprise를 activation으로 식별할 수 있다는 후속 연구 방향을 간접적으로 뒷받침한다.

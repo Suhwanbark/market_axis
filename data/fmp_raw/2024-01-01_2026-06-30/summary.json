@@ -1,0 +1,43 @@
+{
+  "created_at_utc": "2026-07-23T11:31:27.831+00:00",
+  "groups": {
+    "calendar": {
+      "files": 30,
+      "rows": 75566,
+      "downloaded_bytes": 2131399
+    },
+    "news/general": {
+      "files": 2054,
+      "rows": 139274,
+      "downloaded_bytes": 25869134
+    },
+    "news/market_etfs": {
+      "files": 1824,
+      "rows": 30060,
+      "downloaded_bytes": 5683838
+    },
+    "prices/esusd_1min": {
+      "files": 194,
+      "rows": 240189,
+      "downloaded_bytes": 3271827
+    },
+    "prices/gspc_5min": {
+      "files": 92,
+      "rows": 48537,
+      "downloaded_bytes": 1146068
+    },
+    "prices/vix_eod": {
+      "files": 1,
+      "rows": 637,
+      "downloaded_bytes": 18492
+    },
+    "quarantine": {
+      "files": 44,
+      "rows": 10961,
+      "downloaded_bytes": 2168530
+    }
+  },
+  "total_files": 4239,
+  "total_rows": 545224,
+  "total_downloaded_bytes": 40289288
+}

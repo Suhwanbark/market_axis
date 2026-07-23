@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "source": "Financial Modeling Prep stable API",
+  "start_date": "2024-01-01",
+  "end_date": "2026-06-30",
+  "news_symbols": [
+    "SPY",
+    "QQQ",
+    "DIA",
+    "IWM",
+    "XLK",
+    "XLF",
+    "XLE",
+    "XLV",
+    "XLI",
+    "XLY",
+    "XLP",
+    "XLB",
+    "XLU",
+    "XLRE",
+    "XLC",
+    "TLT",
+    "HYG",
+    "UUP",
+    "GLD",
+    "USO",
+    "VXX"
+  ],
+  "news_page_limit": 250,
+  "news_query_window": "one calendar day; paginate until an empty response",
+  "price_series": {
+    "^GSPC": "5min in <=10-calendar-day request windows",
+    "^VIX": "EOD full",
+    "ESUSD": "1min on selected macro-event dates"
+  },
+  "request_policy": {
+    "concurrency": 2,
+    "minimum_interval_seconds": 0.6
+  },
+  "request_policy_history": [
+    {
+      "concurrency": 1,
+      "minimum_interval_seconds": 10.0,
+      "effective_at_utc": "2026-07-23T08:37:08+00:00"
+    },
+    {
+      "concurrency": 1,
+      "minimum_interval_seconds": 3.0,
+      "effective_at_utc": "2026-07-23T09:00:00+00:00"
+    },
+    {
+      "concurrency": 1,
+      "minimum_interval_seconds": 0.6,
+      "effective_at_utc": "2026-07-23T09:01:30+00:00"
+    },
+    {
+      "concurrency": 2,
+      "minimum_interval_seconds": 0.6,
+      "effective_at_utc": "2026-07-23T09:05:36.846+00:00"
+    }
+  ],
+  "created_at_utc": "2026-07-23T08:37:08+00:00"
+}

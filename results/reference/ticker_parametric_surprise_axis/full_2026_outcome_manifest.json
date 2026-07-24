@@ -1,0 +1,24 @@
+{
+  "axis_manifest": "outputs/prefixless_article_axis_test/axes/manifest.json",
+  "completed_at_utc": "2026-07-24T17:41:09.394833+00:00",
+  "event_date_max": "2026-07-21",
+  "event_date_min": "2026-01-02",
+  "event_dates": 137,
+  "finite_counts": {
+    "abnormal_volume_h1": 9304,
+    "abs_market_adjusted_return_h1": 9335,
+    "abs_market_adjusted_return_h2": 9271,
+    "market_adjusted_return": 9335,
+    "parkinson_expansion_h1": 9304,
+    "pre_abs_market_adjusted_return_h1": 9327,
+    "prevol20": 9303
+  },
+  "interpretation": "retrospective outcome materialization after controlled axis and prefixless score freeze",
+  "market_labels_used_to_fit_axis": false,
+  "market_values_opened": true,
+  "price_end": "2026-07-31",
+  "price_start": "2025-09-04",
+  "rows": 9376,
+  "status": "TICKER_SURPRISE_FULL_2026_OUTCOMES_COMPLETE",
+  "tickers": 3042
+}

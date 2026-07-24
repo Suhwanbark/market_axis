@@ -1,0 +1,17 @@
+{
+  "completed_at_utc": "2026-07-24T18:07:22.805587+00:00",
+  "finite": true,
+  "input": "Target company: company_name (market_ticker), then title + two newlines + analysis_body; no instruction, question, answer options, or delimiter",
+  "layer": 24,
+  "market_labels_used": false,
+  "max_length": 2048,
+  "model": "qwen3_4b",
+  "num_shards": 2,
+  "pooling": [
+    "last retained token",
+    "mean retained tokens"
+  ],
+  "rows": 4688,
+  "shard_index": 0,
+  "status": "COMPANY_PREFIXED_AXIS_SHARD_COMPLETE"
+}

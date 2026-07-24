@@ -1,0 +1,24 @@
+{
+  "axis_market_labels_used": false,
+  "completed_at_utc": "2026-07-24T18:14:57.084610+00:00",
+  "date_block_repeats": 2000,
+  "event_date_max": "2026-07-21",
+  "event_date_min": "2026-01-02",
+  "interpretation": "retrospective all-eligible-2026 evaluation; controlled axes remain frozen and use no market labels",
+  "issuer_block_repeats": 2000,
+  "market_outcomes_used_for_evaluation": true,
+  "models": [
+    "qwen25_7b",
+    "qwen3_4b"
+  ],
+  "post_open_audit_extension": "Direct-LM comparison across all four outcomes; does not alter primary score, outcome, or decision",
+  "primary_outcome": "abs_market_adjusted_return_h1",
+  "primary_score": "last_projection",
+  "rows": 9376,
+  "status": "TICKER_SURPRISE_FULL_2026_EVALUATION_COMPLETE",
+  "variants": [
+    "prefixless",
+    "company_prefix"
+  ],
+  "within_date_permutation_repeats": 2000
+}

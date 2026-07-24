@@ -28,12 +28,20 @@ primary 성공이나 cross-model axis로 승격하지 않는다.
 동일한 전체 기사로 수행한 전용 embedding+Ridge와 explicit Direct-LM
 0--9 rating 비교도 완료했다. Qwen2.5 mean-axis는 Direct Qwen2.5보다
 point estimate가 높지만 차이가 확정적이지 않았고, Embedding-8B+Ridge의
-\(\rho=0.3062\)보다 낮았다. 따라서 현 단계에서 axis가 강한 text baseline을
-이긴다는 주장은 실패했다. 다음 체크포인트는 frozen axis를 사용 가능한
-2026년 전체 9,376개 기사에 prefixless 및 company/ticker attribution-prefix
-두 버전으로 적용하는 것이다. 더 좋아야 한다는 요구는 사후 튜닝 조건이
-아니라 falsifiable success criterion으로 취급하며, 못 이긴 결과도 그대로
-커밋한다.
+\(\rho=0.3062\)보다 낮았다.
+
+Frozen axis의 2026년 전체 9,376개 기사 평가도 완료했다. 사전 primary인
+last projection은 Qwen3에서 prefixless \(\rho=0.1118\), company/ticker
+prefix \(\rho=0.1036\)으로 날짜·issuer·within-date 검정을 모두 통과했지만,
+Qwen2.5에서는 0이었다. 따라서 primary의 cross-model replication은
+실패했다. 사전에 sensitivity로 분리해 둔 Qwen2.5 mean projection은
+1일/2일 절대 시장조정수익률, Parkinson 변동성 확장, 비정상 거래량
+모두에서 \(\rho=0.1669\)--\(0.2480\)이고, full 기간에는 Direct Qwen2.5도
+유의하게 이겼다. 다만 Qwen3에는 같은 우위가 없고, untouched July의
+Embedding-8B보다도 낮았으므로 “일반적이고 embedding보다 우월한 axis”는
+아니다. 현재 가장 정확한 결론은 **Qwen3 primary transfer 한 건과,
+Qwen2.5의 강하지만 secondary/model-specific한 mean-pooled downstream
+signal**이다.
 
 ## 0. Document status
 
@@ -49,9 +57,9 @@ questions that are easy to conflate:
    surprise rating?
 
 The controlled benchmark, nonlinear/linear probe comparisons, first
-prefixless July real-news projection, and fair exact-article embedding/direct
-baselines are complete as of 2026-07-25 KST. The full-2026 extension is
-updated only after its terminal manifest exists.
+prefixless July real-news projection, fair exact-article embedding/direct
+baselines, and the complete eligible-2026 prefixless/company-prefix
+evaluation are complete as of 2026-07-25 KST.
 
 Important terminology:
 
@@ -864,6 +872,13 @@ real article was used to fit the controlled axis, the frozen raw projection
 can be evaluated across the complete available period from 2026-01-02 through
 2026-07-21.
 
+The underlying label-blind super-cohort contains 13,735 articles. Before any
+market outcome was opened, the frozen atomic-claim audit removed 4,359 recap,
+investment-commentary, market-reaction-title, speculative-event, and
+relation-homonym articles. “Full 2026” below therefore means every one of the
+9,376 **pre-frozen eligible** articles, not a post-outcome subset and not the
+13,735-row raw super-cohort.
+
 This is broader and higher powered than the 383-row July analysis, but it is
 retrospective. It must not be described as a preregistered untouched
 confirmation.
@@ -946,12 +961,123 @@ baseline.
   abnormal volume.
 - Input-variant comparison: prefixless versus attribution prefix, paired by
   article and event date.
+- Dependence checks: event-date block bootstrap, issuer-block bootstrap, and
+  a within-date permutation test for the primary score/outcome.
 
 The success criterion "the axis must be better" is treated as a falsifiable
 criterion, not permission for test-set tuning. If it is not better, the
 negative result will be committed unchanged.
 
-`PENDING_FULL_2026_RESULT`
+### 11.4 Cohort and outcome availability
+
+The 9,376 eligible rows are distributed as 3,545 `development_train`, 4,525
+`development_test`, 923 `boundary_excluded`, and 383 `july_confirmation`
+rows. Every row is a different ticker-session. The controlled axis was fit on
+none of these articles. Outcome availability after price materialization is:
+
+| Outcome | Finite rows |
+|---|---:|
+| one-session absolute market-adjusted return | 9,335 |
+| two-session absolute market-adjusted return | 9,271 |
+| Parkinson range-volatility expansion | 9,304 |
+| abnormal volume | 9,304 |
+
+The period contains 137 event dates and 3,042 tickers. Five mechanically
+split-like price rows are excluded by the frozen price audit.
+
+### 11.5 Full-period primary result
+
+| Model | Input | Spearman | Date-block 95% CI | Issuer-block 95% CI | model-BH \(q\), date / issuer | Within-date \(p\) |
+|---|---|---:|---:|---:|---:|---:|
+| Qwen2.5 | prefixless | -0.0040 | [-0.0287, 0.0209] | [-0.0259, 0.0174] | 0.6187 / 0.6457 | 0.7326 |
+| Qwen2.5 | company prefix | -0.0004 | [-0.0266, 0.0266] | [-0.0225, 0.0205] | 0.5097 / 0.5132 | 0.5667 |
+| Qwen3 | prefixless | **0.1118** | **[0.0798, 0.1382]** | **[0.0892, 0.1340]** | **0.0010 / 0.0010** | **0.0005** |
+| Qwen3 | company prefix | **0.1036** | **[0.0756, 0.1272]** | **[0.0815, 0.1253]** | **0.0010 / 0.0010** | **0.0005** |
+
+Thus Qwen3 passes the primary transfer test in both input variants. Qwen2.5
+does not, so the required cross-model primary replication fails. Adding the
+company/ticker attribution does not improve the Qwen3 primary score:
+\(\Delta\rho=-0.0082\), date-block 95% CI [-0.0183, 0.0038].
+
+### 11.6 Downstream outcome coverage
+
+The table below shows the two useful but differently qualified frozen
+signals: Qwen3 `last_projection` is the primary score, while Qwen2.5
+`mean_projection` is the sensitivity specified before the full-period test.
+
+| Model / score | Input | \(|MAR_1|\) | \(|MAR_2|\) | Parkinson expansion | Abnormal volume |
+|---|---|---:|---:|---:|---:|
+| Qwen3 last | prefixless | 0.1118 | 0.0986 | 0.2025 | 0.1661 |
+| Qwen3 last | company prefix | 0.1036 | 0.0898 | 0.2048 | 0.1598 |
+| Qwen2.5 mean | prefixless | 0.1755 | 0.1669 | 0.1848 | 0.2308 |
+| Qwen2.5 mean | company prefix | 0.1869 | 0.1773 | 0.2084 | 0.2480 |
+
+All 16 correlations in this table have positive date-block and issuer-block
+95% intervals and remain significant under the 64-comparison exploratory BH
+correction. In contrast, Qwen2.5 `last_projection` is null across all four
+outcomes. This is why the Qwen2.5 mean result is useful as a downstream
+feature but cannot retroactively replace the primary endpoint.
+
+### 11.7 Direct-LM comparison and practical utility
+
+The zero-shot Direct-LM rating is significantly correlated with every
+full-period outcome:
+
+| Direct model | \(|MAR_1|\) | \(|MAR_2|\) | Parkinson expansion | Abnormal volume |
+|---|---:|---:|---:|---:|
+| Qwen2.5 | 0.1279 | 0.1121 | 0.0737 | 0.1187 |
+| Qwen3 | 0.2117 | 0.1919 | 0.2727 | 0.2857 |
+
+Every primary last-axis variant loses to its corresponding Direct LM on all
+four outcomes; every paired date-block and issuer-block interval for
+\(\rho_{\text{axis}}-\rho_{\text{Direct}}\) is strictly negative. For the
+primary one-session outcome:
+
+| Model | Axis input | Axis \(\rho\) | Direct \(\rho\) | Paired \(\Delta\rho\), date 95% CI |
+|---|---|---:|---:|---:|
+| Qwen2.5 | prefixless | -0.0040 | 0.1279 | -0.1320 [-0.1624, -0.1038] |
+| Qwen2.5 | company prefix | -0.0004 | 0.1279 | -0.1283 [-0.1582, -0.0993] |
+| Qwen3 | prefixless | 0.1118 | 0.2117 | -0.0999 [-0.1347, -0.0707] |
+| Qwen3 | company prefix | 0.1036 | 0.2117 | -0.1080 [-0.1375, -0.0780] |
+
+There is one qualified practical win. Qwen2.5 mean projection exceeds Direct
+Qwen2.5 for every outcome. With the company prefix, the paired gains are
++0.0589 for one-session return, +0.0651 for two-session return, +0.1347 for
+Parkinson expansion, and +0.1293 for abnormal volume; both date- and
+issuer-block intervals are strictly positive. Qwen3 does not reproduce this
+advantage.
+
+The dedicated embedding Ridge cannot be fairly re-evaluated on “all 2026 as
+test,” because it was fit using development-period market labels. Its fair
+untouched comparison therefore remains the 383-row July result, where
+Embedding-8B reaches \(\rho=0.3062\) and beats every axis score. Accordingly,
+the overall requirement to beat both Direct LM and the strong embedding
+baseline is not met.
+
+### 11.8 What the attribution prefix changes
+
+| Model / score | Prefixless-prefix score Spearman | Mean absolute change in prefixless SD |
+|---|---:|---:|
+| Qwen2.5 last | 0.7471 | 0.3765 |
+| Qwen2.5 mean | 0.9906 | 0.1196 |
+| Qwen3 last | 0.8788 | 0.3457 |
+| Qwen3 mean | 0.9795 | 0.1638 |
+
+The prefix adds a median 11 total tokens. The 2,048-token cap affects 2,673
+prefixless rows and 2,683 prefixed rows, so only ten additional rows hit the
+cap. Mean pooling is much more stable than last-token pooling. The prefix
+significantly improves mean-pooling correlation for both models and all four
+outcomes, but it does not reliably improve the primary last projection.
+
+### 11.9 Post-open audit disclosure
+
+The primary table, all 64 fixed axis/outcome combinations, prefix comparison,
+and Direct-LM primary comparison were fixed before the full-period result was
+opened. After seeing that first table, Direct-LM comparison was extended to
+all four outcomes and both mean sensitivities. This audit extension does not
+change the primary score, outcome, layer, direction, pooling decision, or
+success rule. Its results are reported as comparative diagnostics, not as a
+new preregistered endpoint.
 
 ## 12. Leakage and audit matrix
 
@@ -1136,6 +1262,62 @@ EXACT_ARTICLE_BASELINE_EVALUATION_COMPLETE
 EXACT_ARTICLE_INCREMENTAL_GAIN_COMPLETE
 ```
 
+### 15.6 Full-2026 attribution-prefix and market evaluation
+
+Before any GPU launch, restore and validate the local model copies:
+
+```bash
+bash scripts/bootstrap_tmp_runtime.sh
+```
+
+The command must print `RUNTIME_BOOTSTRAP_OK`. The four company-prefix shards
+use the same frozen axis, row order, layers, pooling definitions, and
+2,048-token limit as the prefixless run. Each command was run in its own named
+`tmux` session (`full2026_prefix_q25_s0`, `full2026_prefix_q25_s1`,
+`full2026_prefix_q3_s0`, and `full2026_prefix_q3_s1`):
+
+```bash
+CUDA_VISIBLE_DEVICES=0 /tmp/axis_conda_sh/bin/python \
+  scripts/extract_company_prefixed_article_axis_scores.py \
+  --model qwen25_7b --device 0 \
+  --shard-index 0 --num-shards 2 --batch-size 2 --max-length 2048
+
+CUDA_VISIBLE_DEVICES=1 /tmp/axis_conda_sh/bin/python \
+  scripts/extract_company_prefixed_article_axis_scores.py \
+  --model qwen25_7b --device 0 \
+  --shard-index 1 --num-shards 2 --batch-size 2 --max-length 2048
+
+CUDA_VISIBLE_DEVICES=2 /tmp/axis_conda_sh/bin/python \
+  scripts/extract_company_prefixed_article_axis_scores.py \
+  --model qwen3_4b --device 0 \
+  --shard-index 0 --num-shards 2 --batch-size 4 --max-length 2048
+
+CUDA_VISIBLE_DEVICES=3 /tmp/axis_conda_sh/bin/python \
+  scripts/extract_company_prefixed_article_axis_scores.py \
+  --model qwen3_4b --device 0 \
+  --shard-index 1 --num-shards 2 --batch-size 4 --max-length 2048
+```
+
+Only after the controlled axis and article scores are frozen, materialize the
+market outcomes and run the fixed evaluator:
+
+```bash
+/tmp/axis_conda_sh/bin/python \
+  scripts/build_ticker_surprise_full_2026_outcomes.py
+
+/tmp/axis_conda_sh/bin/python \
+  scripts/evaluate_ticker_surprise_full_2026.py \
+  --repeats 2000 --permutation-repeats 2000
+```
+
+Expected terminal statuses:
+
+```text
+COMPANY_PREFIXED_AXIS_SHARD_COMPLETE
+TICKER_SURPRISE_FULL_2026_OUTCOMES_COMPLETE
+TICKER_SURPRISE_FULL_2026_EVALUATION_COMPLETE
+```
+
 ## 16. Artifact locations
 
 Controlled readouts:
@@ -1162,6 +1344,13 @@ July evaluation:
 outputs/prefixless_article_axis_test/evaluation/
 ```
 
+Company/ticker-prefix scores and the full-2026 retrospective evaluation:
+
+```text
+outputs/company_prefixed_article_axis_test/extractions/
+outputs/ticker_surprise_full_2026/
+```
+
 Curated, small reference tables intended for Git will be copied under:
 
 ```text
@@ -1183,12 +1372,22 @@ result tables are committed.
 4. The first July primary transfer test fails for both models. A Qwen2.5
    mean-pooled sensitivity is positive, but is post-primary and does not
    replicate in Qwen3; it is not promoted to the main claim.
-5. The primary axes lose to exact Direct-LM and dedicated Embedding-8B
-   baselines. Qwen2.5 mean pooling exceeds its direct-model point estimate but
-   not with a paired interval excluding zero, and it remains below
-   Embedding-8B.
+5. In the untouched July comparison, the primary axes lose to exact
+   Direct-LM and dedicated Embedding-8B baselines. Qwen2.5 mean pooling exceeds
+   its direct-model point estimate there but not with a paired interval
+   excluding zero, and it remains below Embedding-8B.
 6. Mean axes improve log-\(R^2\) beyond price controls alone, but their
    incremental gain beyond Embedding-8B is not established at a two-sided 95%
    level. Last axes reduce performance beyond Embedding-8B.
-7. Full-2026 prefixless and company/ticker-prefix validity remains the next
-   separate empirical question.
+7. In the full eligible-2026 retrospective test, Qwen3 last projection
+   transfers to all four market outcomes and passes the primary one-session
+   test under date, issuer, and within-date controls. Qwen2.5 last projection
+   remains null, so primary cross-model replication fails.
+8. Qwen2.5 mean projection is a strong model-specific secondary signal across
+   returns, range volatility, and volume. It beats Direct Qwen2.5 across the
+   full period, but Qwen3 does not reproduce that relative advantage.
+9. A company/ticker attribution prefix significantly improves both models'
+   mean-pooling correlations but does not improve the primary last projection.
+10. The full primary axes remain weaker than Direct LM, and the fair July
+    result remains weaker than Embedding-8B. The claim of a general,
+    embedding-superior downstream axis is therefore rejected.

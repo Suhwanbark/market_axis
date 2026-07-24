@@ -1,0 +1,14 @@
+{
+  "bootstrap_repeats": 2000,
+  "development_train_rows": 3522,
+  "development_validation_rows": 4477,
+  "embedding_preprocessing": "64-component randomized PCA fit on eligible development_train articles only",
+  "event_dates": 9,
+  "interpretation": "retrospective fair-text comparison; exact prefixless article for axis/embedding, fixed suffix question only for direct LM",
+  "market_labels_used_by_axis": false,
+  "market_labels_used_by_direct_rating": false,
+  "market_labels_used_by_embedding_forward": false,
+  "market_labels_used_by_ridge_heads": true,
+  "rows": 383,
+  "status": "EXACT_ARTICLE_BASELINE_EVALUATION_COMPLETE"
+}

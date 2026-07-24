@@ -25,8 +25,11 @@ mean-pooling sensitivity는 \(\rho=0.1831\), date-block 95% CI
 [0.0663, 0.3226], \(p=0.0006\)이지만 Qwen3에서 반대로 나타났으므로
 primary 성공이나 cross-model axis로 승격하지 않는다.
 
-다음 체크포인트는 동일한 전체 기사로 전용 embedding+Ridge와 explicit
-Direct-LM 0--9 rating을 비교하고, 그 다음 frozen axis를 사용 가능한
+동일한 전체 기사로 수행한 전용 embedding+Ridge와 explicit Direct-LM
+0--9 rating 비교도 완료했다. Qwen2.5 mean-axis는 Direct Qwen2.5보다
+point estimate가 높지만 차이가 확정적이지 않았고, Embedding-8B+Ridge의
+\(\rho=0.3062\)보다 낮았다. 따라서 현 단계에서 axis가 강한 text baseline을
+이긴다는 주장은 실패했다. 다음 체크포인트는 frozen axis를 사용 가능한
 2026년 전체 9,376개 기사에 prefixless 및 company/ticker attribution-prefix
 두 버전으로 적용하는 것이다. 더 좋아야 한다는 요구는 사후 튜닝 조건이
 아니라 falsifiable success criterion으로 취급하며, 못 이긴 결과도 그대로
@@ -45,10 +48,10 @@ questions that are easy to conflate:
    anything beyond dedicated text embeddings or an explicit direct-LLM
    surprise rating?
 
-The controlled benchmark, nonlinear/linear probe comparisons, and the first
-prefixless July real-news projection are complete as of 2026-07-25 KST.
-Dedicated embedding, direct-LLM, and full-2026 extensions are updated only
-after their corresponding terminal manifests exist.
+The controlled benchmark, nonlinear/linear probe comparisons, first
+prefixless July real-news projection, and fair exact-article embedding/direct
+baselines are complete as of 2026-07-25 KST. The full-2026 extension is
+updated only after its terminal manifest exists.
 
 Important terminology:
 
@@ -678,8 +681,7 @@ outputs/prefixless_article_axis_test/evaluation/
 
 ## 10. Dedicated embedding and direct-LLM baselines
 
-This section is populated in the next checkpoint regardless of whether the
-axis wins or loses.
+This comparison is complete and is reported even though the axis does not win.
 
 ### 10.1 Fair-input requirement
 
@@ -690,7 +692,7 @@ controls and are not the final fair comparison.
 
 ### 10.2 Embedding baseline
 
-Two dedicated embedding models are planned:
+Two dedicated embedding models are evaluated:
 
 - Qwen3-Embedding-0.6B;
 - Qwen3-Embedding-8B.
@@ -701,7 +703,13 @@ the July confirmation rows are evaluated. It is invalid to call all 2026 rows
 an untouched test set for an embedding+Ridge model if any of their market
 labels fit the Ridge head.
 
-Reported comparisons will therefore distinguish:
+The embedding vectors are L2-normalized final-token representations. A
+64-component randomized PCA is fit on the 3,522 development-train articles
+only. Ridge alpha is selected on 4,477 chronologically later development
+articles, after which the head is refit on both development splits and
+evaluated on the 383 July rows.
+
+The comparison therefore distinguishes:
 
 - zero-shot scalar embedding novelty on the whole eligible cohort;
 - embedding+Ridge on a genuinely chronological held-out period;
@@ -733,7 +741,121 @@ For the identical held-out rows:
   return controls;
 - false-discovery-rate adjusted values across secondary outcomes.
 
-`PENDING_FAIR_BASELINE_RESULT`
+### 10.5 Input and score audit
+
+All forwards cover the same 9,376 eligible articles.
+
+| Forward | Mean retained article tokens | Median | Truncation/max-length rate |
+|---|---:|---:|---:|
+| Axis and embedding article input | 1,183.54 | 1,058 | 28.54% at 2,048 tokens |
+| Direct Qwen2.5 article portion | 1,156.03 | — | 29.58% article clipping |
+| Direct Qwen3 article portion | 1,154.85 | — | 29.62% article clipping |
+
+The direct prompt reserves room for the complete rating question. Its whole
+rendered chat reaches 2,048 tokens for 25.74% of Qwen2.5 rows and 25.87% of
+Qwen3 rows.
+
+The direct ratings are non-degenerate:
+
+| Model | Rating mean | Rating standard deviation |
+|---|---:|---:|
+| Qwen2.5 | 1.9215 | 1.4614 |
+| Qwen3 | 4.2379 | 1.0061 |
+
+Different means are not calibrated across models; only within-model article
+rankings are interpreted.
+
+### 10.6 Zero-shot July comparison
+
+Axis and Direct-LM scores in this table use no market-label head:
+
+| Score | Spearman | Date-block 95% CI | Within-date one-sided \(p\) |
+|---|---:|---:|---:|
+| Qwen2.5 last-axis | 0.0024 | [-0.1079, 0.1163] | 0.6327 |
+| Qwen3 last-axis | -0.0472 | [-0.1393, 0.0408] | 0.8231 |
+| Qwen2.5 mean-axis | **0.1831** | **[0.0687, 0.3261]** | **0.0005** |
+| Qwen3 mean-axis | -0.1171 | [-0.1554, -0.0764] | 0.9885 |
+| Direct Qwen2.5 | 0.1066 | [-0.0312, 0.2368] | 0.0225 |
+| Direct Qwen3 | **0.1400** | **[0.0039, 0.2714]** | **0.0100** |
+
+The within-date permutation \(p\) and date-block interval answer different
+questions. Direct Qwen2.5 has a positive within-date permutation result but
+its date-block interval crosses zero, so it is not robust to the small
+nine-date block sample.
+
+Paired date-block comparison:
+
+| Axis candidate | Baseline | \(\Delta\rho\) | 95% CI |
+|---|---|---:|---:|
+| Qwen2.5 last-axis | Direct Qwen2.5 | -0.1043 | [-0.2543, 0.0562] |
+| Qwen3 last-axis | Direct Qwen3 | -0.1872 | **[-0.3339, -0.0308]** |
+| Qwen2.5 mean-axis | Direct Qwen2.5 | +0.0764 | [-0.0459, 0.1972] |
+| Qwen3 mean-axis | Direct Qwen3 | -0.2570 | **[-0.3995, -0.1335]** |
+
+Qwen2.5 mean pooling has a higher point estimate than its direct rating, but
+the paired interval crosses zero. There is no established gain over Direct LM.
+
+### 10.7 Dedicated embedding+Ridge comparison
+
+The market Ridge predictions use the same chronological development split and
+the same 383 July rows:
+
+| Feature set | Features | July log-\(R^2\) | Spearman | Large-reaction AUC |
+|---|---:|---:|---:|---:|
+| Qwen2.5 last-axis Ridge | 1 | -0.1567 | -0.0024 | 0.5136 |
+| Qwen2.5 mean-axis Ridge | 1 | -0.0754 | 0.1831 | 0.7008 |
+| Direct Qwen3 Ridge | 1 | -0.0736 | 0.1400 | 0.5996 |
+| Embedding-0.6B Ridge | 64 | -0.0049 | 0.2456 | 0.7491 |
+| Embedding-8B Ridge | 64 | **0.0329** | **0.3062** | **0.8117** |
+
+The best dedicated text baseline is Embedding-8B. Relative to it:
+
+| Axis prediction | \(\Delta\rho\) versus Embedding-8B | 95% CI |
+|---|---:|---:|
+| Qwen2.5 last-axis Ridge | -0.3085 | **[-0.4812, -0.1755]** |
+| Qwen3 last-axis Ridge | -0.3534 | **[-0.4820, -0.2438]** |
+| Qwen2.5 mean-axis Ridge | -0.1231 | [-0.2741, 0.0119] |
+| Qwen3 mean-axis Ridge | -0.4232 | **[-0.5765, -0.2758]** |
+
+Thus the primary axes clearly lose to Embedding-8B, and the favorable
+Qwen2.5 mean sensitivity still does not establish superiority.
+
+### 10.8 Incremental downstream tests
+
+Pre-event controls are trailing volatility and lagged absolute
+market-adjusted return.
+
+| Candidate minus baseline | \(\Delta R^2_{\log}\) | Date-block 95% CI | \(\Delta\)AUC | AUC 95% CI |
+|---|---:|---:|---:|---:|
+| price + last axes minus price | -0.0059 | [-0.0231, 0.0144] | -0.0401 | [-0.1095, 0.0151] |
+| price + mean axes minus price | **+0.0558** | **[0.0044, 0.1138]** | -0.0223 | [-0.1193, 0.0491] |
+| price + Direct ratings minus price | **+0.1937** | **[0.0076, 0.5044]** | -0.0285 | [-0.1675, 0.0697] |
+| price + Embedding-8B + last axes minus price + Embedding-8B | -0.0043 | **[-0.0070, -0.0015]** | -0.0036 | [-0.0131, 0.0021] |
+| price + Embedding-8B + mean axes minus price + Embedding-8B | +0.0177 | [-0.0006, 0.0433] | -0.0056 | [-0.0182, 0.0029] |
+
+Mean axes improve log-\(R^2\) relative to price controls alone, although both
+models remain poorly calibrated in absolute \(R^2\) and the AUC does not
+improve. Once the stronger Embedding-8B representation is included, the
+two-sided 95% interval for mean-axis incremental \(R^2\) crosses zero. Last
+axes significantly reduce \(R^2\) beyond Embedding-8B.
+
+### 10.9 Baseline conclusion
+
+The downstream success criterion is not met:
+
+1. the primary last-token axis is null or negative;
+2. Qwen2.5 mean pooling is the only favorable axis sensitivity;
+3. it does not replicate in Qwen3;
+4. it does not significantly beat Direct Qwen2.5 in paired rank correlation;
+5. it is weaker than the dedicated Embedding-8B Ridge baseline;
+6. its incremental gain beyond Embedding-8B is not established at a
+   two-sided 95% level.
+
+The accurate current label is:
+
+> A replicated controlled parametric-surprise representation with one
+> model-specific mean-pooled real-news sensitivity, but no demonstrated
+> general or embedding-superior downstream axis.
 
 ## 11. Full available 2026 expansion
 
@@ -985,6 +1107,35 @@ Expected terminal status:
 PREFIXLESS_ARTICLE_AXIS_TEST_COMPLETE
 ```
 
+### 15.5 Exact-article baselines
+
+Direct-LM and embedding jobs are sharded identically to the axis extraction.
+The coordinator waits for all direct manifests, revalidates the local runtime,
+launches both embedding models, then runs the fair evaluator:
+
+```bash
+tmux new-session -d -s exact_baseline_coordinator \
+  "bash scripts/run_exact_article_baseline_coordinator.sh"
+```
+
+The component commands are implemented in:
+
+```text
+scripts/extract_exact_article_direct_rating.py
+scripts/extract_exact_article_embeddings.py
+scripts/evaluate_exact_article_baselines.py
+scripts/evaluate_exact_article_incremental_gain.py
+```
+
+Expected terminal statuses:
+
+```text
+EXACT_ARTICLE_DIRECT_RATING_SHARD_COMPLETE
+EXACT_ARTICLE_EMBEDDING_SHARD_COMPLETE
+EXACT_ARTICLE_BASELINE_EVALUATION_COMPLETE
+EXACT_ARTICLE_INCREMENTAL_GAIN_COMPLETE
+```
+
 ## 16. Artifact locations
 
 Controlled readouts:
@@ -1029,8 +1180,15 @@ result tables are committed.
    representation claim does not require linearity.
 3. A simpler linear delta readout remains positive on held-out firms and
    supplies a reusable raw-space direction.
-4. Real-news raw-state transfer, dedicated-embedding gain, direct-LLM gain,
-   and full-2026 market validity remain separate empirical questions.
-5. The first July primary transfer test fails for both models. A Qwen2.5
+4. The first July primary transfer test fails for both models. A Qwen2.5
    mean-pooled sensitivity is positive, but is post-primary and does not
    replicate in Qwen3; it is not promoted to the main claim.
+5. The primary axes lose to exact Direct-LM and dedicated Embedding-8B
+   baselines. Qwen2.5 mean pooling exceeds its direct-model point estimate but
+   not with a paired interval excluding zero, and it remains below
+   Embedding-8B.
+6. Mean axes improve log-\(R^2\) beyond price controls alone, but their
+   incremental gain beyond Embedding-8B is not established at a two-sided 95%
+   level. Last axes reduce performance beyond Embedding-8B.
+7. Full-2026 prefixless and company/ticker-prefix validity remains the next
+   separate empirical question.

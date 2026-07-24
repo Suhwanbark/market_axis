@@ -1,0 +1,28 @@
+{
+  "bootstrap_repeats": 5000,
+  "comparisons": [
+    {
+      "baseline": "price_plus_embedding_8b",
+      "candidate": "price_embedding_8b_plus_axis_both"
+    },
+    {
+      "baseline": "price_plus_embedding_8b",
+      "candidate": "price_embedding_8b_plus_axis_mean_both"
+    },
+    {
+      "baseline": "price_only",
+      "candidate": "price_plus_axis_last_both"
+    },
+    {
+      "baseline": "price_only",
+      "candidate": "price_plus_axis_mean_both"
+    },
+    {
+      "baseline": "price_only",
+      "candidate": "price_plus_direct_both"
+    }
+  ],
+  "event_dates": 9,
+  "rows": 383,
+  "status": "EXACT_ARTICLE_INCREMENTAL_GAIN_COMPLETE"
+}

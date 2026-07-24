@@ -1,0 +1,32 @@
+{
+  "controlled_test": {
+    "qwen25_7b": {
+      "pair_concordance": 0.721961953435548,
+      "same_outcome_conflict_auc": 0.8518518518518519,
+      "within_group_spearman": 0.5829358587645856
+    },
+    "qwen3_4b": {
+      "pair_concordance": 0.6127158576441897,
+      "same_outcome_conflict_auc": 0.7,
+      "within_group_spearman": 0.3028408256646858
+    }
+  },
+  "incremental_r2": {
+    "ci": [
+      -0.0025857627828886,
+      0.0083923733802721
+    ],
+    "point": 0.0016824660830068
+  },
+  "q3_market_alert": {
+    "auc": 0.6974478862263784,
+    "auc_ci": [
+      0.5489101215270322,
+      0.8711772296132051
+    ],
+    "base_rate": 0.0757180156657963,
+    "mean_absolute_return_lift": 2.165127434620499,
+    "spearman": 0.1512186613349269,
+    "top_decile_precision": 0.2564102564102564
+  }
+}

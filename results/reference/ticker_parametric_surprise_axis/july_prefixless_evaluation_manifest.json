@@ -1,0 +1,38 @@
+{
+  "event_dates": 9,
+  "interpretation": "test-only zero-shot projection; no market-label fitting, no prefix/question, retrospective July cohort",
+  "primary_results": [
+    {
+      "date_block_ci_high": 0.11481518620431172,
+      "date_block_ci_low": -0.10789940796364159,
+      "event_dates": 9,
+      "max_length_fraction": 0.16971279373368145,
+      "model": "qwen25_7b",
+      "primary": true,
+      "retained_tokens_mean": 1030.869451697128,
+      "retained_tokens_median": 884.0,
+      "rows": 383,
+      "score": "last_projection",
+      "spearman": 0.0023523044167703313,
+      "within_date_permutation_p_one_sided": 0.6224755048990201
+    },
+    {
+      "date_block_ci_high": 0.03988162539839834,
+      "date_block_ci_low": -0.13875255719368138,
+      "event_dates": 9,
+      "max_length_fraction": 0.16971279373368145,
+      "model": "qwen3_4b",
+      "primary": true,
+      "retained_tokens_mean": 1030.869451697128,
+      "retained_tokens_median": 884.0,
+      "rows": 383,
+      "score": "last_projection",
+      "spearman": -0.04722486603420229,
+      "within_date_permutation_p_one_sided": 0.8218356328734253
+    }
+  ],
+  "primary_score": "last_projection",
+  "repeats": 5000,
+  "rows": 383,
+  "status": "PREFIXLESS_ARTICLE_AXIS_TEST_COMPLETE"
+}

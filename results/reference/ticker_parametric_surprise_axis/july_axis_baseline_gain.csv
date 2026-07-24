@@ -1,0 +1,11 @@
+axis_candidate,baseline,observed_delta_spearman,date_block_ci_low,date_block_ci_high,bootstrap_probability_axis_not_better
+axis_last_qwen25,direct_qwen25,-0.10428848611813597,-0.2543289446522652,0.05620342955610574,0.8945
+axis_last_qwen3,direct_qwen3,-0.18719221187101007,-0.33390794176504573,-0.030750542673344726,0.993
+axis_mean_qwen25,direct_qwen25,0.07641539820649873,-0.045854073473880826,0.19719429250357,0.105
+axis_mean_qwen3,direct_qwen3,-0.25703320437986144,-0.3994756310146515,-0.13346215789515906,1.0
+prediction_axis_last_qwen25_ridge,prediction_embedding_8b_ridge,-0.30853880321720706,-0.4812355645753504,-0.17546453318893754,1.0
+prediction_axis_last_qwen3_ridge,prediction_embedding_8b_ridge,-0.35339609277814993,-0.4820288432608307,-0.24375219740903495,1.0
+prediction_axis_mean_qwen25_ridge,prediction_embedding_8b_ridge,-0.12311503800254261,-0.2741474198621069,0.011930057766357626,0.961
+prediction_axis_mean_qwen3_ridge,prediction_embedding_8b_ridge,-0.42323708528700127,-0.5764812257082551,-0.2757905185940201,1.0
+prediction_price_plus_axis_last_both,prediction_price_plus_embedding_8b,-0.07984933973999703,-0.1478826702240364,-0.03181160211235873,1.0
+prediction_price_plus_axis_mean_both,prediction_price_plus_embedding_8b,0.005807818886443494,-0.09548934697354192,0.08050236991716386,0.424

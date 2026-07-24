@@ -54,3 +54,79 @@ python scripts/verify_main_results.py
 
 The four main replay commands are CPU-only. GPU is needed only to regenerate
 the activation and embedding arrays.
+
+## Cutoff-safe Llama 2 News replication
+
+The repository also contains a staged News-only replication that replaces
+Qwen2.5 with the base Llama 2 7B checkpoint.  Llama 2 pretraining ends in
+September 2022; the Chat checkpoint is deliberately not used because its
+tuning data can extend into 2023.  The existing BGE-M3 model remains the
+dedicated-embedding baseline.
+
+The pipeline preserves the main News sample and normalized Parkinson label,
+but does not allow 2023 representations to be extracted until the 2022
+validation selection has been written:
+
+```bash
+export PYTHONPATH="$PWD/scripts:$PWD"
+bash scripts/run_news_cutoff_safe.sh
+```
+
+The explicit stages are implemented in
+[`scripts/news_cutoff_safe_llama2.py`](scripts/news_cutoff_safe_llama2.py):
+
+1. rebuild the canonical 25,767 / 12,051 / 12,478 News split;
+2. extract BGE and all 32 Llama layers for train and validation;
+3. tune BGE alpha and Llama layer/alpha on validation, then freeze them;
+4. extract and evaluate the 2023 test representations;
+5. compare baseline, BGE, and Llama scores in Parkinson forecasting.
+
+This removes the Qwen knowledge-cutoff overlap, but the 2023 test period was
+already inspected in earlier research.  It is therefore a cutoff-safety
+replication rather than a fresh confirmatory holdout.
+
+The completed pinned run selected Llama layer 17 with Ridge alpha 1.0 before
+opening test representations.  On the 12,478-document 2023 test, Llama
+activation reached 0.1628 Spearman / 0.2057 Pearson versus 0.0904 / 0.1215 for
+BGE-M3.  The Spearman difference was +0.0723 (date-block 95% CI
+[0.0536, 0.0924]; ticker-block [0.0494, 0.0950], 2,000 resamples).  Adding the
+Llama score improved forecast QLIKE over the no-text baseline by 4.38--4.86%
+at one day and 4.52--5.28% at five days across AR(5), HAR, HAR-X, and MIDAS.
+
+Only the Llama activation checkpoint is cutoff-safe for this protocol.  BGE-M3
+is intentionally retained as the existing small-embedding baseline and is not
+claimed to be a cutoff-matched historical checkpoint.
+
+## Uncentered capacity and 8-K controls (July 2026)
+
+The latest requested analysis does **not** subtract train-ticker means from
+labels or representations.  It compares BGE-M3 (0.57B), Qwen3-Embedding-8B,
+and all 32 layers of base Llama 2 7B.  Qwen3 is a capacity control only; it is
+not cutoff-safe for either test period.  A matched 64-unit MLP head is evaluated
+alongside Ridge, and all six resulting scores are added to the same AR(5), HAR,
+HAR-X, and MIDAS forecasts.
+
+For News, the uncentered 2023 test Spearman correlations are 0.0829 (BGE),
+0.0893 (Qwen3-8B), and 0.1511 (Llama activation, validation-selected layer 16).
+Average QLIKE improvements over the price-only baselines are respectively
+1.57%, 3.07%, and 4.20% at one day and 1.38%, 1.64%, and 4.60% at five days.
+
+The new public-data 8-K panel contains 863 / 1,232 / 890 documents in
+2022-2023 train / 2024 validation / 2025 test.  Its test Spearman correlations
+are 0.3239 (BGE), 0.3409 (Qwen3-8B), and 0.3301 (Llama activation,
+validation-selected layer 32).  Activation therefore does not win the direct
+8-K impact-correlation comparison.  It does win the downstream forecast
+comparison: its Ridge score reduces one-day QLIKE by 8.65% on average versus
+the price-only baselines and by 9.24--10.36% versus the Qwen3 Ridge score.
+
+The public 8-K CSV lacks EDGAR acceptance timestamps.  This run consequently
+uses the first ticker trading session strictly after `file_date`, not a claimed
+exact acceptance-time event mapping.  The limitation is recorded in
+`outputs/sec8k_uncentered/data_manifest.json`.
+
+Run the complete 8-K protocol with:
+
+```bash
+export PYTHONPATH="$PWD/scripts:$PWD"
+bash scripts/run_sec8k_uncentered.sh
+```

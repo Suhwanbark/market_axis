@@ -1,0 +1,25 @@
+{
+  "market_labels_used": false,
+  "models": {
+    "qwen25_7b": {
+      "alpha": 1000.0,
+      "hidden": 3584,
+      "layer": 20,
+      "selection": "best linear_delta layer/alpha by controlled validation pair concordance then within-group Spearman",
+      "train_rows": 2682,
+      "validation_pair_concordance": 0.7113201911589009,
+      "validation_rows": 912
+    },
+    "qwen3_4b": {
+      "alpha": 100.0,
+      "hidden": 2560,
+      "layer": 24,
+      "selection": "best linear_delta layer/alpha by controlled validation pair concordance then within-group Spearman",
+      "train_rows": 2835,
+      "validation_pair_concordance": 0.6069832944390269,
+      "validation_rows": 1101
+    }
+  },
+  "status": "PREFIXLESS_TEST_AXES_FROZEN",
+  "test_articles_used": false
+}
